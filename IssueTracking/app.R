@@ -29,6 +29,8 @@ library(reactable)
 #excel download
 library(xlsx)
 library(DBI)
+#Rpostgres for dbcon
+library(RPostgres)
 # package versioning
 library(renv)
 #Not in logical
@@ -40,25 +42,40 @@ library(renv)
 options(DT.options = list(pageLength = 15))
 
 #set db connection
-#using a pool connection so separate connnections are unified
+#using a pool connection so separate connections are unified
 #gets environmental variables saved in local or pwdrstudio environment
-poolConn <- dbPool(odbc(), dsn = "mars14_datav2", uid = Sys.getenv("shiny_uid"), pwd = Sys.getenv("shiny_pwd"))
+conn <- dbPool(RPostgres::Postgres(),
+                 dbname = 'mars_data', 
+                 host = 'PWDMARSDBS1', 
+                 port = 5434, 
+                 user = Sys.getenv("shiny_uid"),
+                 password = Sys.getenv("shiny_pwd"))
 
 # fiscal quarter lookup
-q_list  <- dbGetQuery(poolConn,"select * from admin.tbl_fiscal_quarter_lookup") %>%
+q_list  <- dbGetQuery(conn,"select * from admin.tbl_fiscal_quarter_lookup") %>%
   select(fiscal_quarter) %>%
+  arrange(tolower(fiscal_quarter), fiscal_quarter) %>%
   pull
 #system ids
-system_id <- odbc::dbGetQuery(poolConn, paste0("select distinct system_id from external.mat_assets where system_id like '%-%'")) %>% 
+system_id <- odbc::dbGetQuery(conn, paste0("select distinct system_id from external.mat_assets where system_id like '%-%'")) %>% 
   dplyr::arrange(system_id) %>%  
   dplyr::pull()
 # component ids
-component_and_asset_query <- paste0("SELECT * FROM external.mat_assets_ict_limited WHERE component_id != 'NULL'")
-component_and_asset <- dbGetQuery(poolConn, component_and_asset_query)
+# component_and_asset_query <- paste0("SELECT * FROM external.mat_assets")
+# component_and_asset <- dbGetQuery(conn, component_and_asset_query)
+# 
+# components_id <- odbc::dbGetQuery(conn, paste0("select distinct system_id from external.mat_assets where system_id like '%-%'")) 
+
+# load the issue types
+issue_types <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_type_lookup"))
+issue_choices <- issue_types %>% 
+  select(issue_type) %>%
+  arrange(tolower(issue_type), issue_type) %>%
+  pull
 
 #disconnect from db on stop 
 onStop(function(){
-  poolClose(poolConn)
+  poolClose(conn)
 })
 
 # UI -----
@@ -68,11 +85,10 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                        tabPanel("Issues Table", value = "status", 
                                                 sidebarLayout(
                                                   sidebarPanel(
-                                                    selectInput("system_id", "System ID", choices = c("All", system_id)),
-                                                    selectInput("f_q", "Fiscal Quarter", choices = q_list, selected = "FY24Q2"),
-                                                    selectInput("problem", "Problem", choices = c("Low", "Medium", "High")),
-                                                    dateInput("date_observed", "Date Observed"),
-                                                    selectInput("status", "Status", choices = c("Open", "In Progress", "Closed")),
+                                                    selectizeInput ("system_id", "System ID", choices = NULL),
+                                                    selectInput("f_q", "Fiscal Quarter", choices = c("All", q_list), selected = "All"),
+                                                    selectInput("issues", "Issues", choices = c("All", issue_choices)),
+                                                    selectInput("status", "Status", choices = c("All", "Open", "In Progress", "Closed")),
                                                     downloadButton("download_table", "Download")
                                                   ),
                                                   mainPanel(
@@ -83,14 +99,13 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                        tabPanel("Add/Edit Issues", value = "add_edit", 
                                                 sidebarLayout(
                                                   sidebarPanel(
-                                                    selectInput("system_id", "System ID", choices = c("All", system_id)),
-                                                    selectInput("component_id", "Component ID", choices = c("Low", "Medium", "High")),
-                                                    selectInput("problem", "Problem", choices = c("Low", "Medium", "High")),
-                                                    dateInput("date_observed", "Date Observed"),
+                                                    selectizeInput ("system_id_edit", "System ID", choices = NULL),
+                                                    selectInput("component_id", "Component ID", choices = "", selected = NULL),
+                                                    selectInput("issues_edit", "Issues", choices = c("", issue_choices), selected = ""),
+                                                    dateInput("date_observed", "Date Observed", value = as.Date(NA)),
                                                     textInput("image_link", "Link to Image"),
                                                     textInput("reporter_initials", "Reporter Initials"),
-                                                    selectInput("priority", "Priority Level", choices = c("Low", "Medium", "High")),
-                                                    selectInput("status", "Status", choices = c("Open", "In Progress", "Closed")),
+                                                    selectInput("priority", "Priority Level", choices = c("","Low", "Medium", "High"), selected = ""),
                                                     textAreaInput("inspector_note", "Inspector Note"),
                                                     actionButton("submit_btn", "Submit Issue")
                                                   ),
@@ -105,7 +120,35 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
 # Server -----
 server <- function(input, output, session) {
   
+  #initialzie reactive values ------
+  rv <- reactiveValues()
+  
+  # server-side selectizeinput for system ids across the tabs
+  updateSelectizeInput(session, 'system_id', choices = c("All", system_id), server = TRUE)
+  updateSelectizeInput(session, 'system_id_edit', choices = system_id, selected = character(0), server = TRUE)
+  
+  
+  
+  #show component IDs based on SMPs/sites ------
+  #component IDs
+  #adjust query to accurately target NULL values once back on main server
+  rv$component_and_asset_query <- reactive(paste0("SELECT component_id, asset_type FROM external.mat_assets_ict_limited WHERE system_id = '", input$system_id_edit, "' AND component_id != 'NULL'"))
+  rv$component_and_asset <- reactive(odbc::dbGetQuery(conn, rv$component_and_asset_query()))
+  
+  rv$asset_comp <- reactive(rv$component_and_asset() %>% 
+                              mutate("asset_comp_code" = paste(component_id, asset_type, sep = " | ")))
+  
+  rv$asset_combo <- reactive(rv$asset_comp()$asset_comp_code)
+  
+  observe(updateSelectInput(session, "component_id", choices = c("", rv$asset_combo())))
+  
+  # all issues
+  rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
+  
+  
 }
 
 # Run the application
 shinyApp(ui = ui, server = server)
+
+# end ; close the DB connection 
