@@ -65,8 +65,9 @@ system_id <- odbc::dbGetQuery(conn, paste0("select distinct system_id from exter
 # load the issue types
 issue_types <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_type_lookup"))
 issue_choices <- issue_types %>% 
-  select(issue_type) %>%
-  arrange(tolower(issue_type), issue_type) %>%
+  select(category) %>%
+  distinct() %>%
+  arrange(tolower(category), category) %>%
   pull
 
 #disconnect from db on stop 
@@ -97,7 +98,9 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                   sidebarPanel(
                                                     selectizeInput ("system_id_edit", "System ID", choices = NULL),
                                                     selectInput("component_id", "Component ID", choices = "", selected = NULL),
-                                                    selectInput("issues_edit", "Issues", choices = c("", issue_choices), selected = ""),
+                                                    selectInput("issues_edit", "Issue Category", choices = c("", issue_choices), selected = ''),
+                                                    conditionalPanel(condition = "input.issues_edit !== ''",
+                                                                     selectInput("issues_sub", "Issue", choices = "", selected = NULL)),
                                                     dateInput("date_observed", "Date Observed", value = as.Date(NA)),
                                                     textInput("image_link", "Link to Image"),
                                                     textInput("reporter_initials", "Reporter Initials"),
@@ -143,6 +146,15 @@ server <- function(input, output, session) {
                                pull)
   
   observe(updateSelectInput(session, "component_id", choices = c("", rv$asset_combo())))
+  
+  
+  # update sub issue
+  rv$sub_issue <- reactive(issue_types %>%
+                             filter(category == input$issues_edit) %>%
+                             select(issue) %>%
+                             pull)
+  observe(updateSelectInput(session, "issues_sub", choices = c("", rv$sub_issue())))
+  
   
   # all issues
   rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
