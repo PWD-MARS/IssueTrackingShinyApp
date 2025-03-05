@@ -121,12 +121,15 @@ server <- function(input, output, session) {
   
   # server-side selectizeinput for system ids across the tabs
   updateSelectizeInput(session, 'system_id', choices = c("All", system_id), server = TRUE)
-  updateSelectizeInput(session, 'system_id_edit', choices = system_id, selected = character(0), server = TRUE)
+  updateSelectizeInput(session, 'system_id_edit', choices = c('', system_id), selected = '', server = TRUE)
   
   
   
   #show component IDs based on SMPs/sites ------
   #component IDs
+  
+  # toggle component id-activate if a system is selected
+  observe(toggleState("component_id", condition = input$system_id_edit != '' & length(rv$asset_combo()) > 0))
   #adjust query to accurately target NULL values once back on main server
   rv$component_and_asset_query <- reactive(paste0("SELECT component_id, asset_type FROM external.mat_assets WHERE system_id = '", input$system_id_edit, "' AND component_id IS NOT NULL"))
   rv$component_and_asset <- reactive(odbc::dbGetQuery(conn, rv$component_and_asset_query()))
