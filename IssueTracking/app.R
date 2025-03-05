@@ -56,15 +56,11 @@ q_list  <- dbGetQuery(conn,"select * from admin.tbl_fiscal_quarter_lookup") %>%
   select(fiscal_quarter) %>%
   arrange(tolower(fiscal_quarter), fiscal_quarter) %>%
   pull
+
 #system ids
 system_id <- odbc::dbGetQuery(conn, paste0("select distinct system_id from external.mat_assets where system_id like '%-%'")) %>% 
   dplyr::arrange(system_id) %>%  
   dplyr::pull()
-# component ids
-# component_and_asset_query <- paste0("SELECT * FROM external.mat_assets")
-# component_and_asset <- dbGetQuery(conn, component_and_asset_query)
-# 
-# components_id <- odbc::dbGetQuery(conn, paste0("select distinct system_id from external.mat_assets where system_id like '%-%'")) 
 
 # load the issue types
 issue_types <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_type_lookup"))
@@ -132,13 +128,16 @@ server <- function(input, output, session) {
   #show component IDs based on SMPs/sites ------
   #component IDs
   #adjust query to accurately target NULL values once back on main server
-  rv$component_and_asset_query <- reactive(paste0("SELECT component_id, asset_type FROM external.mat_assets_ict_limited WHERE system_id = '", input$system_id_edit, "' AND component_id != 'NULL'"))
+  rv$component_and_asset_query <- reactive(paste0("SELECT component_id, asset_type FROM external.mat_assets WHERE system_id = '", input$system_id_edit, "' AND component_id IS NOT NULL"))
   rv$component_and_asset <- reactive(odbc::dbGetQuery(conn, rv$component_and_asset_query()))
   
   rv$asset_comp <- reactive(rv$component_and_asset() %>% 
-                              mutate("asset_comp_code" = paste(component_id, asset_type, sep = " | ")))
+                              mutate("asset_comp_code" = ifelse(is.na(component_id), paste("No Component ID", asset_type, sep = " | "), paste(component_id, asset_type, sep = " | "))))
   
-  rv$asset_combo <- reactive(rv$asset_comp()$asset_comp_code)
+  rv$asset_combo <- reactive(rv$asset_comp() %>%
+                               select(asset_comp_code) %>%
+                               arrange(tolower(asset_comp_code), asset_comp_code) %>%
+                               pull)
   
   observe(updateSelectInput(session, "component_id", choices = c("", rv$asset_combo())))
   
