@@ -51,6 +51,13 @@ conn <- dbPool(RPostgres::Postgres(),
                  user = Sys.getenv("shiny_uid"),
                  password = Sys.getenv("shiny_pwd"))
 
+cw_conn <- dbConnect(odbc(),
+                 Driver = "ODBC Driver 17 for SQL Server",
+                 Server = "PWDCWSQLP",
+                 Database = "PWD_Cityworks",
+                 uid = Sys.getenv("cw_uid"),
+                 pwd= Sys.getenv("cw_pwd"))
+
 # fiscal quarter lookup
 q_list  <- dbGetQuery(conn,"select * from admin.tbl_fiscal_quarter_lookup") %>%
   select(fiscal_quarter) %>%
@@ -70,10 +77,26 @@ issue_choices <- issue_types %>%
   arrange(tolower(category), category) %>%
   pull
 
+# status
+status_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_status_lookup")) %>% 
+  select(status) %>%
+  pull
+
 #disconnect from db on stop 
 onStop(function(){
   poolClose(conn)
 })
+
+# #replace special characters with friendlier characters
+special_char_replace <- function(note){
+  
+  note_fix <- note %>%
+    str_replace_all(c("•" = "-", "ï‚§" = "-", "“" = '"', '”' = '"'))
+  
+  return(note_fix)
+  
+}
+
 
 # UI -----
 
@@ -84,8 +107,8 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                   sidebarPanel(
                                                     selectizeInput ("system_id", "System ID", choices = NULL),
                                                     selectInput("f_q", "Fiscal Quarter", choices = c("All", q_list), selected = "All"),
-                                                    selectInput("issues", "Issues", choices = c("All", issue_choices)),
-                                                    selectInput("status", "Status", choices = c("All", "Open", "In Progress", "Closed")),
+                                                    selectInput("issues", "Issue Category", choices = c("All", issue_choices)),
+                                                    selectInput("status", "Status", choices = c("All", status_choices)),
                                                     downloadButton("download_table", "Download")
                                                   ),
                                                   mainPanel(
@@ -105,10 +128,26 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     textInput("image_link", "Link to Image"),
                                                     textInput("reporter_initials", "Reporter Initials"),
                                                     selectInput("priority", "Priority Level", choices = c("","Low", "Medium", "High"), selected = ""),
-                                                    textAreaInput("inspector_note", "Inspector Note"),
-                                                    actionButton("submit_btn", "Submit Issue")
+                                                    numericInput( 
+                                                      "numeric", 
+                                                      "Cityworks Workorder ID", 
+                                                      value = NULL,
+                                                      step = 1,
+                                                      min = 1, 
+                                                      max = 1000000 
+                                                    ),
+                                                    textAreaInput("inspector_note", "Inspector Note", height = 150),
+                                                    disabled(actionButton("submit_btn", "Save/Edit Issue")),
+                                                    actionButton("clear", "Clear All Fields")
+                                                    
                                                   ),
                                                   mainPanel(
+                                                    
+                                                    conditionalPanel(condition = "input.system_id_edit",
+                                                                     h4(textOutput("current_header")),
+                                                                     reactableOutput("open_issues_table"),
+                                                                     h4(textOutput("past_header")), 
+                                                                     reactableOutput("closed_issues_table"))
                                                     
                                                   )
                                                 )
@@ -122,13 +161,26 @@ server <- function(input, output, session) {
   #initialzie reactive values ------
   rv <- reactiveValues()
   
+  # all issues
+  rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
+  
+  # issue lookup
+  rv$issues_lookup <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.issue_wo_lookup"))
+  
+  # cityworks status
+  rv$cw_status <- reactive(dbGetQuery(cw_conn, paste("SELECT WORKORDERID, STATUS FROM Azteca.WORKORDER where WORKORDERID in ('", toString(rv$issues_lookup()$workorder_id),"')", sep = "")) %>%
+                             select(workorder_id = WORKORDERID, status = STATUS))
+  
   # server-side selectizeinput for system ids across the tabs
   updateSelectizeInput(session, 'system_id', choices = c("All", system_id), server = TRUE)
   updateSelectizeInput(session, 'system_id_edit', choices = c('', system_id), selected = '', server = TRUE)
   
+  #process text field to prevent sql injection
+  rv$inspector_note <- reactive(gsub('\'', '\'\'',  input$inspector_note))
+  rv$input_note  <- reactive(special_char_replace(rv$inspector_note()))
+
   
-  
-  #show component IDs based on SMPs/sites ------
+  #show component IDs and Issues based on Systems + Issue Category ------
   #component IDs
   
   # toggle component id-activate if a system is selected
@@ -155,10 +207,86 @@ server <- function(input, output, session) {
                              pull)
   observe(updateSelectInput(session, "issues_sub", choices = c("", rv$sub_issue())))
   
+  # Fiscal Quarter Processing -----
+  #get quarters as dates
+  rv$start_quarter <- reactive(case_when(str_sub(input$f_q, 5, 7) == "Q3" ~ "1/1", 
+                                                 str_sub(input$f_q, 5, 7) == "Q4" ~ "4/1", 
+                                                 str_sub(input$f_q, 5, 7) == "Q1" ~ "7/1", 
+                                                 str_sub(input$f_q, 5, 7) == "Q2" ~ "10/1"))
   
-  # all issues
-  rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
+  rv$end_quarter <- reactive(case_when(str_sub(input$f_q, 5, 7) == "Q3" ~ "3/31", 
+                                               str_sub(input$f_q, 5, 7) == "Q4" ~ "6/30", 
+                                               str_sub(input$f_q, 5, 7) == "Q1" ~ "9/30", 
+                                               str_sub(input$f_q, 5, 7) == "Q2" ~ "12/31"))
   
+  # parse the year component from this format "FY24Q2"
+  rv$year <- reactive(str_sub(input$f_q, 3, 4))
+  
+  #convert FY/Quarter to a real date
+  rv$start_date <- reactive(lubridate::mdy(paste0(rv$start_quarter(), "/", ifelse(str_sub(input$f_q, 5, 7) == "Q1" | str_sub(input$f_q, 5, 7) == "Q2", as.numeric(rv$year())-1, rv$year()))))
+  rv$end_date <- reactive(lubridate::mdy(paste0(rv$end_quarter(), "/", ifelse(str_sub(input$f_q, 5, 7) == "Q1" | str_sub(input$f_q, 5, 7) == "Q2", as.numeric(rv$year())-1, rv$year()))))
+  
+  # headers and sub tables -----
+  #table header-current
+  output$current_header <- renderText(
+    paste("Ongoing Issues for ", input$system_id_edit)
+  )
+  #table header-past
+  output$past_header <- renderText(
+    paste("Past Issues for  ", input$system_id_edit)
+  )
+  
+  # Open issues 
+  
+  rv$open_issues <- reactive(
+    rv$issues() %>%
+      left_join(rv$cw_status(), by = "workorder_id") %>%
+      filter((is.na(status) | status == "REQUESTED"| status == "ASSIGNED"| status == "SCHEDULED") & system_id == input$system_id_edit)
+    
+  )
+  
+  # Open issue table 
+  output$open_issues_table <- renderReactable(
+    reactable(rv$open_issues() %>%
+                select("Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "Status" = status),
+              theme = darkly(),
+              fullWidth = TRUE,
+              selection = "single",
+              searchable = TRUE,
+              onClick = "select",
+              selectionId = "current_issue_selected",
+              #searchable = TRUE,
+              showPageSizeOptions = TRUE,
+              pageSizeOptions = c(25, 50, 100),
+              defaultPageSize = 25,
+              height = 400)
+    )
+  
+  
+  # Past issues
+  rv$closed_issues <- reactive(
+    rv$issues() %>%
+      left_join(rv$cw_status(), by = "workorder_id") %>%
+      filter((status == "CLOSED" | status == "CANCEL" | status == "WORK COMPLETE" ) & system_id == input$system_id_edit)
+    
+  )
+  
+  # Closed issue table 
+  output$closed_issues_table <- renderReactable(
+    reactable(rv$closed_issues() %>%
+                select("Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "Status" = status),
+              theme = darkly(),
+              fullWidth = TRUE,
+              selection = "single",
+              searchable = TRUE,
+              onClick = "select",
+              selectionId = "current_issue_selected",
+              #searchable = TRUE,
+              showPageSizeOptions = TRUE,
+              pageSizeOptions = c(25, 50, 100),
+              defaultPageSize = 25,
+              height = 400)
+  )
   
 }
 
