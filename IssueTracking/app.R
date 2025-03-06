@@ -106,12 +106,16 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                 sidebarLayout(
                                                   sidebarPanel(
                                                     selectizeInput ("system_id", "System ID", choices = NULL),
-                                                    selectInput("f_q", "Fiscal Quarter", choices = c("All", q_list), selected = "All"),
+                                                    selectInput("f_q", "Entry Fiscal Quarter", choices = c("All", q_list)),
                                                     selectInput("issues", "Issue Category", choices = c("All", issue_choices)),
                                                     selectInput("status", "Status", choices = c("All", status_choices)),
-                                                    downloadButton("download_table", "Download")
+                                                    downloadButton("download_table", "Download"),
+                                                    actionButton("clear_all", "Clear All Fields")
+                                                    
                                                   ),
                                                   mainPanel(
+                                                    strong(span(textOutput("table_name"), style = "font-size:22px")),
+                                                    reactableOutput("all_issues_table")
 
                                                   )
                                                 )
@@ -138,7 +142,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     ),
                                                     textAreaInput("inspector_note", "Inspector Note", height = 150),
                                                     disabled(actionButton("submit_btn", "Save/Edit Issue")),
-                                                    actionButton("clear", "Clear All Fields")
+                                                    actionButton("clear_edit", "Clear All Fields")
                                                     
                                                   ),
                                                   mainPanel(
@@ -165,10 +169,10 @@ server <- function(input, output, session) {
   rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
   
   # issue lookup
-  rv$issues_lookup <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.issue_wo_lookup"))
+  rv$wo_lookup <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.issue_wo_lookup"))
   
   # cityworks status
-  rv$cw_status <- reactive(dbGetQuery(cw_conn, paste("SELECT WORKORDERID, STATUS FROM Azteca.WORKORDER where WORKORDERID in ('", toString(rv$issues_lookup()$workorder_id),"')", sep = "")) %>%
+  rv$cw_status <- reactive(dbGetQuery(cw_conn, paste("SELECT WORKORDERID, STATUS FROM Azteca.WORKORDER where WORKORDERID in ('", toString(rv$wo_lookup()$workorder_id),"')", sep = "")) %>%
                              select(workorder_id = WORKORDERID, status = STATUS))
   
   # server-side selectizeinput for system ids across the tabs
@@ -236,6 +240,11 @@ server <- function(input, output, session) {
     paste("Past Issues for  ", input$system_id_edit)
   )
   
+  #table header-all
+  output$table_name <- renderText(
+    paste("All Issues")
+  )
+  
   # Open issues 
   
   rv$open_issues <- reactive(
@@ -287,6 +296,88 @@ server <- function(input, output, session) {
               defaultPageSize = 25,
               height = 400)
   )
+  
+  
+  
+  
+  # Reactive Filtering
+  rv$system_filter <- reactive(
+    if(input$system_id == "" | input$system_id == "All") {
+      system_id
+    } else{
+      input$system_id
+    }
+  )
+  
+  # issue filtering
+  rv$issue_filter <- reactive(
+    if(input$issues == "" | input$issues == "All") {
+      issue_choices
+    } else{
+      input$issues
+    }
+  )
+  
+  # status filtering
+  rv$status_filter <- reactive(
+    if(input$status == "" | input$status == "All") {
+      status_choices
+    } else{
+      input$status
+    }
+  )
+  
+  # quarter
+  rv$quarter_filter <- reactive(
+    if(input$f_q == "" | input$f_q == "All") {
+      status_choices
+    } else{
+      input$status
+    }
+  )
+  
+  
+  # All issues
+  rv$all_issues <- reactive(
+    if(input$f_q == "All"){
+      rv$issues() %>%
+        left_join(rv$cw_status(), by = "workorder_id") %>%
+        filter(system_id %in% rv$system_filter()) %>%
+        filter(category %in% rv$issue_filter()) %>%
+        filter(status %in% rv$status_filter())
+    } else {
+      rv$issues() %>%
+        left_join(rv$cw_status(), by = "workorder_id") %>%
+        filter(system_id %in% rv$system_filter()) %>%
+        filter(category %in% rv$issue_filter()) %>%
+        filter(status %in% rv$status_filter()) %>%
+        filter(date_entered <= rv$end_date() & date_entered >= rv$start_date())
+    }
+
+    
+  )
+  
+  # All issue table 
+  output$all_issues_table <- renderReactable(
+    reactable(rv$all_issues() %>%
+                select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "Status" = status),
+              theme = darkly(),
+              fullWidth = TRUE,
+              selection = "single",
+              searchable = TRUE,
+              onClick = "select",
+              selectionId = "current_issue_selected",
+              #searchable = TRUE,
+              showPageSizeOptions = TRUE,
+              pageSizeOptions = c(25, 50, 100),
+              defaultPageSize = 25)
+  )
+  
+  
+  
+  
+  
+  
   
 }
 
