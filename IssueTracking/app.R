@@ -163,6 +163,12 @@ server <- function(input, output, session) {
   #initialzie reactive values ------
   rv <- reactiveValues()
   
+  # row references 
+  rv$all_issues_row <- reactive(getReactableState("all_issues_table", "selected"))
+  rv$open_issues_row <- reactive(getReactableState("open_issues_table", "selected"))
+  rv$closed_issues_row <- reactive(getReactableState("closed_issues_table", "selected"))
+  
+  
   # all issues
   rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
   
@@ -241,8 +247,22 @@ server <- function(input, output, session) {
     paste("All Issues")
   )
   
-  # Open issues 
   
+  # select an open issue row
+  observeEvent(rv$open_issues_row(), {
+    
+    # populate component combo
+    rv$selected_combo_open <- reactive(rv$asset_comp() %>%
+                                    filter(component_id ==  rv$open_issues()$component_id[rv$open_issues_row()]) %>%
+                                    select(asset_comp_code) %>%
+                                    pull)
+    
+    updateReactable("closed_issues_table", selected = NA)
+    updateSelectInput(session, "component_id", selected = rv$selected_combo_open())
+    
+  })
+  
+  # Open issues 
   rv$open_issues <- reactive(
     rv$issues() %>%
       left_join(rv$cw_status(), by = "workorder_id") %>%
@@ -265,6 +285,20 @@ server <- function(input, output, session) {
               defaultPageSize = 25,
               height = 400)
     )
+  
+  # select an closed issue row
+  observeEvent(rv$closed_issues_row(), {
+    
+    # populate component combo
+    rv$selected_combo_closed <- reactive(rv$asset_comp() %>%
+                                    filter(component_id ==  rv$closed_issues()$component_id[rv$closed_issues_row()]) %>%
+                                    select(asset_comp_code) %>%
+                                    pull)
+    
+    updateReactable("open_issues_table", selected = NA)
+    updateSelectInput(session, "component_id", selected = rv$selected_combo_closed())
+    
+  })
   
   # Past issues
   rv$closed_issues <- reactive(
@@ -325,6 +359,17 @@ server <- function(input, output, session) {
     }
   )
   
+  
+  
+# Switch Tabs if a row from the first tab selected
+  observeEvent(rv$all_issues_row(), {
+    updateTabsetPanel(session, "TabPanelID", selected = "add_edit")
+    updateSelectInput(session, "system_id_edit", selected = rv$all_issues()$system_id[rv$all_issues_row()])
+    
+  }
+  )
+    
+  
   # All issues
   rv$all_issues <- reactive(
     if(input$f_q == "All"){
@@ -359,7 +404,6 @@ server <- function(input, output, session) {
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25)
   )
-  
   
 }
 
