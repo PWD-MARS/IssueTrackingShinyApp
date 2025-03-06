@@ -97,7 +97,6 @@ special_char_replace <- function(note){
   
 }
 
-
 # UI -----
 
 # Define UI
@@ -152,7 +151,6 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                                      reactableOutput("open_issues_table"),
                                                                      h4(textOutput("past_header")), 
                                                                      reactableOutput("closed_issues_table"))
-                                                    
                                                   )
                                                 )
                                                 )
@@ -183,7 +181,6 @@ server <- function(input, output, session) {
   rv$inspector_note <- reactive(gsub('\'', '\'\'',  input$inspector_note))
   rv$input_note  <- reactive(special_char_replace(rv$inspector_note()))
 
-  
   #show component IDs and Issues based on Systems + Issue Category ------
   #component IDs
   
@@ -202,7 +199,6 @@ server <- function(input, output, session) {
                                pull)
   
   observe(updateSelectInput(session, "component_id", choices = c("", rv$asset_combo())))
-  
   
   # update sub issue
   rv$sub_issue <- reactive(issue_types %>%
@@ -251,7 +247,7 @@ server <- function(input, output, session) {
     rv$issues() %>%
       left_join(rv$cw_status(), by = "workorder_id") %>%
       filter((is.na(status) | status == "REQUESTED"| status == "ASSIGNED"| status == "SCHEDULED") & system_id == input$system_id_edit)
-    
+  
   )
   
   # Open issue table 
@@ -263,7 +259,6 @@ server <- function(input, output, session) {
               selection = "single",
               searchable = TRUE,
               onClick = "select",
-              selectionId = "current_issue_selected",
               #searchable = TRUE,
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
@@ -271,13 +266,11 @@ server <- function(input, output, session) {
               height = 400)
     )
   
-  
   # Past issues
   rv$closed_issues <- reactive(
     rv$issues() %>%
       left_join(rv$cw_status(), by = "workorder_id") %>%
       filter((status == "CLOSED" | status == "CANCEL" | status == "WORK COMPLETE" ) & system_id == input$system_id_edit)
-    
   )
   
   # Closed issue table 
@@ -289,16 +282,12 @@ server <- function(input, output, session) {
               selection = "single",
               searchable = TRUE,
               onClick = "select",
-              selectionId = "current_issue_selected",
               #searchable = TRUE,
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
               height = 400)
   )
-  
-  
-  
   
   # Reactive Filtering
   rv$system_filter <- reactive(
@@ -336,7 +325,6 @@ server <- function(input, output, session) {
     }
   )
   
-  
   # All issues
   rv$all_issues <- reactive(
     if(input$f_q == "All"){
@@ -366,17 +354,11 @@ server <- function(input, output, session) {
               selection = "single",
               searchable = TRUE,
               onClick = "select",
-              selectionId = "current_issue_selected",
               #searchable = TRUE,
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25)
   )
-  
-  
-  
-  
-  
   
   
 }
