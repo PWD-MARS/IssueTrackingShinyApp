@@ -132,14 +132,15 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     textInput("reporter_initials", "Reporter Initials"),
                                                     selectInput("priority", "Priority Level", choices = c("","Low", "Medium", "High"), selected = ""),
                                                     numericInput( 
-                                                      "numeric", 
+                                                      "numeric_woid", 
                                                       "Cityworks Workorder ID", 
                                                       value = NULL,
                                                       step = 1,
                                                       min = 1, 
-                                                      max = 1000000 
+                                                      max = 100000000 
                                                     ),
-                                                    textAreaInput("inspector_note", "Inspector Note", height = 150),
+                                                    textAreaInput("inspector_note", "Inspector Notes", height = 100),
+                                                    textAreaInput("gso_note", "GSO Notes", height = 100),
                                                     disabled(actionButton("submit_btn", "Save/Edit Issue")),
                                                     actionButton("clear_edit", "Clear All Fields")
                                                     
@@ -154,13 +155,29 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                   )
                                                 )
                                                 )
+),
+
+# Custom CSS to change the text color of inspector_note and gso_note to black
+tags$style(HTML("
+    #inspector_note, #gso_note {
+      color: black !important;  /* Ensures text color is black */
+      font-weight: bold !important;  /* Make the text bold */
+    }
+    #image_link, #numeric_woid, #reporter_initials {
+      color: black !important;  /* Ensures text color is black */
+    }
+   
+    
+  "))
+
 )
-)
+
+
 
 # Server -----
 server <- function(input, output, session) {
   
-  #initialzie reactive values ------
+  ## initialzie reactive values ----
   rv <- reactiveValues()
   
   # row references 
@@ -247,6 +264,7 @@ server <- function(input, output, session) {
     paste("All Issues")
   )
   
+  # Open Issues Sub Table -----
   
   # select an open issue row
   observeEvent(rv$open_issues_row(), {
@@ -259,6 +277,17 @@ server <- function(input, output, session) {
     
     updateReactable("closed_issues_table", selected = NA)
     updateSelectInput(session, "component_id", selected = rv$selected_combo_open())
+    updateSelectInput(session, "issues_edit", selected = rv$open_issues()$category[rv$open_issues_row()])
+    delay(10 , updateSelectInput(session, "issues_sub", selected = rv$open_issues()$issue[rv$open_issues_row()])) # delay enusres sub issues input is enabled before update
+    updateSelectInput(session, "date_observed", selected = rv$open_issues()$date_entered[rv$open_issues_row()])
+    updateTextAreaInput(session, "image_link", value = rv$open_issues()$link_image[rv$open_issues_row()])
+    updateTextAreaInput(session, "reporter_initials", value = rv$open_issues()$initials[rv$open_issues_row()])
+    updateSelectInput(session, "priority", selected = rv$open_issues()$priority[rv$open_issues_row()])
+    updateSelectInput(session, "numeric_woid", selected = as.numeric(rv$open_issues()$workorder_id[rv$open_issues_row()]))
+    updateTextAreaInput(session, "inspector_note", value = rv$open_issues()$inspector_notes[rv$open_issues_row()])
+    updateTextAreaInput(session, "gso_note", value = rv$open_issues()$notes[rv$open_issues_row()])
+    
+    
     
   })
   
@@ -283,8 +312,20 @@ server <- function(input, output, session) {
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
-              height = 400)
+              height = 400,
+              details = function(index) {
+                note_link <- rv$open_issues()[rv$open_issues()$issue_uid == rv$open_issues()$issue_uid[index], ] %>%
+                  select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
+                htmltools::div(style = "padding: 1rem",
+                               reactable(note_link, 
+                                         theme = darkly(),
+                                         outlined = TRUE)
+                )
+              })
     )
+  
+  
+  # Closed Issues Sub Table ----
   
   # select an closed issue row
   observeEvent(rv$closed_issues_row(), {
@@ -320,10 +361,24 @@ server <- function(input, output, session) {
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
-              height = 400)
+              height = 400,
+              details = function(index) {
+                note_link <- rv$closed_issues()[rv$closed_issues()$issue_uid == rv$closed_issues()$issue_uid[index], ] %>%
+                  select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
+                htmltools::div(style = "padding: 1rem",
+                               reactable(note_link, 
+                                         theme = darkly(),
+                                         outlined = TRUE)
+                )
+              })
   )
   
-  # Reactive Filtering
+  
+  
+  # All Issues Sub Table ------
+  ### Reactive Filtering
+  
+  # system id filtering
   rv$system_filter <- reactive(
     if(input$system_id == "" | input$system_id == "All") {
       c(system_id, NA)                # show NAs too
@@ -392,7 +447,16 @@ server <- function(input, output, session) {
               #searchable = TRUE,
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
-              defaultPageSize = 25)
+              defaultPageSize = 25,
+              details = function(index) {
+                note_link <- rv$all_issues()[rv$all_issues()$issue_uid == rv$all_issues()$issue_uid[index], ] %>%
+                  select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
+                htmltools::div(style = "padding: 1rem",
+                               reactable(note_link, 
+                                         theme = darkly(),
+                                         outlined = TRUE)
+                )
+              })
   )
   
 }
