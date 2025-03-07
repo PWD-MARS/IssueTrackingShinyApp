@@ -121,6 +121,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     selectInput("f_q", "Entry Fiscal Quarter", choices = c("All", q_list)),
                                                     selectInput("issues", "Issue Category", choices = c("All", issue_choices)),
                                                     selectInput("status", "Cityworks Status", choices = c("All", cw_status_choices)),
+                                                    selectInput("gso_status", "GSO Status", choices = c("All", gso_status_choices)),
                                                     downloadButton("download_table", "Download"),
                                                     actionButton("clear_all", "Clear All Fields")
                                                     
@@ -144,7 +145,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     textInput("image_link", "Link to Image"),
                                                     textInput("reporter_initials", "Reporter Initials"),
                                                     selectInput("priority", "Priority Level", choices = c("", priority_choices), selected = ""),
-                                                    selectInput("gso_status", "GSO Status", choices = c("", gso_status_choices), selected = ""),
+                                                    selectInput("gso_status_edit", "GSO Status", choices = c("", gso_status_choices), selected = ""),
                                                     selectizeInput ("char_woid", "Cityworks Workorder ID", choices = NULL),
                                                     textAreaInput("inspector_note", "Inspector Notes", height = 93),
                                                     textAreaInput("gso_note", "GSO Notes", height = 93),
@@ -347,7 +348,7 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "image_link", value = rv$open_issues()$link_image[rv$open_issues_row()])
     updateTextAreaInput(session, "reporter_initials", value = rv$open_issues()$initials[rv$open_issues_row()])
     updateSelectInput(session, "priority", selected = rv$open_issues()$priority[rv$open_issues_row()])
-    updateSelectInput(session, "gso_status", selected = rv$open_issues()$gso_status[rv$open_issues_row()])
+    updateSelectInput(session, "gso_status_edit", selected = rv$open_issues()$gso_status[rv$open_issues_row()])
     updateSelectInput(session, "char_woid", selected = rv$open_issues()$workorder_id[rv$open_issues_row()])
     updateTextAreaInput(session, "inspector_note", value = rv$open_issues()$inspector_notes[rv$open_issues_row()])
     updateTextAreaInput(session, "gso_note", value = rv$open_issues()$notes[rv$open_issues_row()])
@@ -409,7 +410,7 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "image_link", value = rv$closed_issues()$link_image[rv$closed_issues_row()])
     updateTextAreaInput(session, "reporter_initials", value = rv$closed_issues()$initials[rv$closed_issues_row()])
     updateSelectInput(session, "priority", selected = rv$closed_issues()$priority[rv$closed_issues_row()])
-    updateSelectInput(session, "gso_status", selected = rv$closed_issues()$gso_status[rv$closed_issues_row()])
+    updateSelectInput(session, "gso_status_edit", selected = rv$closed_issues()$gso_status[rv$closed_issues_row()])
     updateSelectInput(session, "char_woid", selected = rv$closed_issues()$workorder_id[rv$closed_issues_row()])
     updateTextAreaInput(session, "inspector_note", value = rv$closed_issues()$inspector_notes[rv$closed_issues_row()])
     updateTextAreaInput(session, "gso_note", value = rv$closed_issues()$notes[rv$closed_issues_row()])
@@ -472,12 +473,21 @@ server <- function(input, output, session) {
     }
   )
   
-  # status filtering
+  # CW status filtering
   rv$status_filter <- reactive(
     if(input$status == "" | input$status == "All") {
       c(cw_status_choices, NA)          # show NAs too
     } else{
       input$status
+    }
+  )
+  
+  # gso status filtering
+  rv$gso_status_filter <- reactive(
+    if(input$gso_status == "" | input$gso_status == "All") {
+      c(gso_status_choices, NA)          # show NAs too
+    } else{
+      input$gso_status
     }
   )
   
@@ -516,13 +526,16 @@ server <- function(input, output, session) {
         left_join(rv$cw_status(), by = "workorder_id") %>%
         filter(system_id %in% rv$system_filter()) %>%
         filter(category %in% rv$issue_filter()) %>%
-        filter(status %in% rv$status_filter())
+        filter(status %in% rv$status_filter()) %>%
+        filter(gso_status %in% rv$gso_status_filter())
+      
     } else {
       rv$issues() %>%
         left_join(rv$cw_status(), by = "workorder_id") %>%
         filter(system_id %in% rv$system_filter()) %>%
         filter(category %in% rv$issue_filter()) %>%
         filter(status %in% rv$status_filter()) %>%
+        filter(gso_status %in% rv$gso_status_filter()) %>%
         filter(date_entered <= rv$end_date() & date_entered >= rv$start_date())
     }
 
