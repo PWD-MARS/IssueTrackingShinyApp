@@ -139,8 +139,8 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                       min = 1, 
                                                       max = 100000000 
                                                     ),
-                                                    textAreaInput("inspector_note", "Inspector Notes", height = 100),
-                                                    textAreaInput("gso_note", "GSO Notes", height = 100),
+                                                    textAreaInput("inspector_note", "Inspector Notes", height = 93),
+                                                    textAreaInput("gso_note", "GSO Notes", height = 93),
                                                     disabled(actionButton("submit_btn", "Save/Edit Issue")),
                                                     actionButton("clear_edit", "Clear All Fields")
                                                     
@@ -353,7 +353,7 @@ server <- function(input, output, session) {
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
-              height = 400,
+              height = 430,
               details = function(index) {
                 note_link <- rv$open_issues()[rv$open_issues()$issue_uid == rv$open_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
@@ -412,7 +412,7 @@ server <- function(input, output, session) {
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
-              height = 400,
+              height = 430,
               details = function(index) {
                 note_link <- rv$closed_issues()[rv$closed_issues()$issue_uid == rv$closed_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
@@ -517,6 +517,10 @@ server <- function(input, output, session) {
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
+              columns = list(
+                "Issue" = colDef(width = 200),
+                "Comp ID" = colDef(width = 200)
+              ),
               details = function(index) {
                 note_link <- rv$all_issues()[rv$all_issues()$issue_uid == rv$all_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
