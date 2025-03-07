@@ -159,15 +159,10 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
 
 # Custom CSS to change the text color of inspector_note and gso_note to black
 tags$style(HTML("
-    #inspector_note, #gso_note {
-      color: black !important;  /* Ensures text color is black */
-      font-weight: bold !important;  /* Make the text bold */
-    }
-    #image_link, #numeric_woid, #reporter_initials {
+    #image_link, #numeric_woid, #reporter_initials, #inspector_note, #gso_note {
       color: black !important;  /* Ensures text color is black */
     }
-   
-    
+  
   "))
 
 )
@@ -264,6 +259,52 @@ server <- function(input, output, session) {
     paste("All Issues")
   )
   
+  
+  # Clear buttons -----
+  # first tab
+  observeEvent(input$clear_all, {
+    showModal(modalDialog(title = "Clear All Fields", 
+                          "Are you sure you want to clear all fields on this tab?", 
+                          modalButton("No"), 
+                          actionButton("confirm_clear_pcs", "Yes")))
+  })
+  
+  
+  observeEvent(input$confirm_clear_pcs, {
+    reset("system_id")
+    reset("status")
+    reset("issues")
+    reset("f_q")
+    
+    removeModal()
+  })
+  
+  # second tab
+  observeEvent(input$clear_edit, {
+    showModal(modalDialog(title = "Clear All Fields", 
+                          "Are you sure you want to clear all fields on this tab?", 
+                          modalButton("No"), 
+                          actionButton("confirm_clear_pcs", "Yes")))
+  })
+  
+  observeEvent(input$confirm_clear_pcs, {
+    reset("system_id_edit")
+    reset("component_id")
+    reset("issues_edit")
+    reset("issues_sub")
+    reset("date_observed")
+    reset("image_link")
+    reset("reporter_initials")
+    reset("priority")
+    reset("numeric_woid")
+    reset("inspector_note")
+    reset("gso_note")
+    
+    removeModal()
+  })
+  
+  
+  
   # Open Issues Sub Table -----
   
   # select an open issue row
@@ -338,6 +379,16 @@ server <- function(input, output, session) {
     
     updateReactable("open_issues_table", selected = NA)
     updateSelectInput(session, "component_id", selected = rv$selected_combo_closed())
+    updateSelectInput(session, "issues_edit", selected = rv$closed_issues()$category[rv$closed_issues_row()])
+    delay(10 , updateSelectInput(session, "issues_sub", selected = rv$closed_issues()$issue[rv$closed_issues_row()])) # delay enusres sub issues input is enabled before update
+    updateSelectInput(session, "date_observed", selected = rv$closed_issues()$date_entered[rv$closed_issues_row()])
+    updateTextAreaInput(session, "image_link", value = rv$closed_issues()$link_image[rv$closed_issues_row()])
+    updateTextAreaInput(session, "reporter_initials", value = rv$closed_issues()$initials[rv$closed_issues_row()])
+    updateSelectInput(session, "priority", selected = rv$closed_issues()$priority[rv$closed_issues_row()])
+    updateSelectInput(session, "numeric_woid", selected = as.numeric(rv$closed_issues()$workorder_id[rv$closed_issues_row()]))
+    updateTextAreaInput(session, "inspector_note", value = rv$closed_issues()$inspector_notes[rv$closed_issues_row()])
+    updateTextAreaInput(session, "gso_note", value = rv$closed_issues()$notes[rv$closed_issues_row()])
+    
     
   })
   
