@@ -140,7 +140,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     textAreaInput("gso_note", "GSO Notes", height = 93),
                                                     disabled(actionButton("submit_btn", "Save/Edit Issue")),
                                                     actionButton("clear_edit", "Clear All Fields"),
-                                                    actionButton("update_wo", "Update Workorer IDs")
+                                                    actionButton("update_wo", "Update Workorder IDs")
                                                     
                                                   ),
                                                   mainPanel(
@@ -202,7 +202,7 @@ server <- function(input, output, session) {
       pull)
     updateSelectizeInput(session, 'char_woid', choices = c('', rv$woid()), selected = '', server = TRUE)
     
-    showModal(modalDialog(title = "Work Order IDs Updated!", size = "s"))
+    showModal(modalDialog(title = "Workorder IDs Updated!", size = "s", easyClose = TRUE))
 
   })
   
