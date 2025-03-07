@@ -82,6 +82,10 @@ status_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_s
   select(status) %>%
   pull
 
+# wo id list
+woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") %>%
+                      pull
+
 #disconnect from db on stop 
 onStop(function(){
   poolClose(conn)
@@ -131,18 +135,12 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     textInput("image_link", "Link to Image"),
                                                     textInput("reporter_initials", "Reporter Initials"),
                                                     selectInput("priority", "Priority Level", choices = c("","Low", "Medium", "High"), selected = ""),
-                                                    numericInput( 
-                                                      "numeric_woid", 
-                                                      "Cityworks Workorder ID", 
-                                                      value = NULL,
-                                                      step = 1,
-                                                      min = 1, 
-                                                      max = 100000000 
-                                                    ),
+                                                    selectizeInput ("char_woid", "Cityworks Workorder ID", choices = NULL),
                                                     textAreaInput("inspector_note", "Inspector Notes", height = 93),
                                                     textAreaInput("gso_note", "GSO Notes", height = 93),
                                                     disabled(actionButton("submit_btn", "Save/Edit Issue")),
-                                                    actionButton("clear_edit", "Clear All Fields")
+                                                    actionButton("clear_edit", "Clear All Fields"),
+                                                    actionButton("update_wo", "Update Workorer IDs")
                                                     
                                                   ),
                                                   mainPanel(
@@ -159,7 +157,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
 
 # Custom CSS to change the text color of inspector_note and gso_note to black
 tags$style(HTML("
-    #image_link, #numeric_woid, #reporter_initials, #inspector_note, #gso_note {
+    #image_link, #char_woid, #reporter_initials, #inspector_note, #gso_note {
       color: black !important;  /* Ensures text color is black */
     }
   
@@ -194,6 +192,19 @@ server <- function(input, output, session) {
   # server-side selectizeinput for system ids across the tabs
   updateSelectizeInput(session, 'system_id', choices = c("All", system_id), server = TRUE)
   updateSelectizeInput(session, 'system_id_edit', choices = c('', system_id), selected = '', server = TRUE)
+  updateSelectizeInput(session, 'char_woid', choices = c('', woid), selected = '', server = TRUE)
+  
+  
+  # update Workorders on click
+  observeEvent(input$update_wo, {
+    # workorder ids choices
+    rv$woid <- reactive(dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") %>%
+      pull)
+    updateSelectizeInput(session, 'char_woid', choices = c('', rv$woid()), selected = '', server = TRUE)
+    
+    showModal(modalDialog(title = "Work Order IDs Updated!", size = "s"))
+
+  })
   
   #process text field to prevent sql injection
   rv$inspector_note <- reactive(gsub('\'', '\'\'',  input$inspector_note))
@@ -296,7 +307,7 @@ server <- function(input, output, session) {
     reset("image_link")
     reset("reporter_initials")
     reset("priority")
-    reset("numeric_woid")
+    reset("char_woid")
     reset("inspector_note")
     reset("gso_note")
     
@@ -324,7 +335,7 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "image_link", value = rv$open_issues()$link_image[rv$open_issues_row()])
     updateTextAreaInput(session, "reporter_initials", value = rv$open_issues()$initials[rv$open_issues_row()])
     updateSelectInput(session, "priority", selected = rv$open_issues()$priority[rv$open_issues_row()])
-    updateSelectInput(session, "numeric_woid", selected = as.numeric(rv$open_issues()$workorder_id[rv$open_issues_row()]))
+    updateSelectInput(session, "char_woid", selected = rv$open_issues()$workorder_id[rv$open_issues_row()])
     updateTextAreaInput(session, "inspector_note", value = rv$open_issues()$inspector_notes[rv$open_issues_row()])
     updateTextAreaInput(session, "gso_note", value = rv$open_issues()$notes[rv$open_issues_row()])
     
@@ -385,7 +396,7 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "image_link", value = rv$closed_issues()$link_image[rv$closed_issues_row()])
     updateTextAreaInput(session, "reporter_initials", value = rv$closed_issues()$initials[rv$closed_issues_row()])
     updateSelectInput(session, "priority", selected = rv$closed_issues()$priority[rv$closed_issues_row()])
-    updateSelectInput(session, "numeric_woid", selected = as.numeric(rv$closed_issues()$workorder_id[rv$closed_issues_row()]))
+    updateSelectInput(session, "char_woid", selected = rv$closed_issues()$workorder_id[rv$closed_issues_row()])
     updateTextAreaInput(session, "inspector_note", value = rv$closed_issues()$inspector_notes[rv$closed_issues_row()])
     updateTextAreaInput(session, "gso_note", value = rv$closed_issues()$notes[rv$closed_issues_row()])
     
@@ -476,7 +487,7 @@ server <- function(input, output, session) {
     reset("image_link")
     reset("reporter_initials")
     reset("priority")
-    reset("numeric_woid")
+    reset("char_woid")
     reset("inspector_note")
     reset("gso_note")
     
