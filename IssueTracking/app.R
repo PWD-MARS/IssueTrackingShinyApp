@@ -343,7 +343,7 @@ server <- function(input, output, session) {
     updateReactable("closed_issues_table", selected = NA)
     updateSelectInput(session, "component_id", selected = rv$selected_combo_open())
     updateSelectInput(session, "issues_edit", selected = rv$open_issues()$category[rv$open_issues_row()])
-    delay(10 , updateSelectInput(session, "issues_sub", selected = rv$open_issues()$issue[rv$open_issues_row()])) # delay enusres sub issues input is enabled before update
+    delay(150 , updateSelectInput(session, "issues_sub", selected = rv$open_issues()$issue[rv$open_issues_row()])) # delay enusres sub issues input is enabled before update
     updateSelectInput(session, "date_observed", selected = rv$open_issues()$date_entered[rv$open_issues_row()])
     updateTextAreaInput(session, "image_link", value = rv$open_issues()$link_image[rv$open_issues_row()])
     updateTextAreaInput(session, "reporter_initials", value = rv$open_issues()$initials[rv$open_issues_row()])
@@ -405,7 +405,7 @@ server <- function(input, output, session) {
     updateReactable("open_issues_table", selected = NA)
     updateSelectInput(session, "component_id", selected = rv$selected_combo_closed())
     updateSelectInput(session, "issues_edit", selected = rv$closed_issues()$category[rv$closed_issues_row()])
-    delay(10 , updateSelectInput(session, "issues_sub", selected = rv$closed_issues()$issue[rv$closed_issues_row()])) # delay enusres sub issues input is enabled before update
+    delay(150 , updateSelectInput(session, "issues_sub", selected = rv$closed_issues()$issue[rv$closed_issues_row()])) # delay enusres sub issues input is enabled before update
     updateSelectInput(session, "date_observed", selected = rv$closed_issues()$date_entered[rv$closed_issues_row()])
     updateTextAreaInput(session, "image_link", value = rv$closed_issues()$link_image[rv$closed_issues_row()])
     updateTextAreaInput(session, "reporter_initials", value = rv$closed_issues()$initials[rv$closed_issues_row()])
