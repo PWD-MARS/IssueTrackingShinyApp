@@ -203,7 +203,7 @@ server <- function(input, output, session) {
   # server-side selectizeinput for system ids across the tabs
   updateSelectizeInput(session, 'system_id', choices = c("All", system_id), server = TRUE)
   updateSelectizeInput(session, 'system_id_edit', choices = c('', system_id), selected = '', server = TRUE)
-  updateSelectizeInput(session, 'char_woid', choices = c('', woid), selected = '', server = TRUE)
+  updateSelectizeInput(session, 'char_woid', choices = c('', "1000", "1281325", woid), selected = '', server = TRUE)
   
   
   # update Workorders on click
@@ -269,11 +269,11 @@ server <- function(input, output, session) {
   # headers and sub tables -----
   #table header-current
   output$current_header <- renderText(
-    paste("Ongoing Issues for ", input$system_id_edit)
+    paste("Pending/On Hold Issues for ", input$system_id_edit)
   )
   #table header-past
   output$past_header <- renderText(
-    paste("Past Issues for  ", input$system_id_edit)
+    paste("Resolved Issues for  ", input$system_id_edit)
   )
   
   #table header-all
@@ -361,7 +361,7 @@ server <- function(input, output, session) {
   rv$open_issues <- reactive(
     rv$issues() %>%
       left_join(rv$cw_status(), by = "workorder_id") %>%
-      filter((is.na(status) | status == "REQUESTED"| status == "ASSIGNED"| status == "SCHEDULED") & system_id == input$system_id_edit)
+      filter((is.na(gso_status) | gso_status == "Pending"| gso_status == "On Hold") & system_id == input$system_id_edit)
   
   )
   
@@ -422,7 +422,7 @@ server <- function(input, output, session) {
   rv$closed_issues <- reactive(
     rv$issues() %>%
       left_join(rv$cw_status(), by = "workorder_id") %>%
-      filter((status == "CLOSED" | status == "CANCEL" | status == "WORK COMPLETE" ) & system_id == input$system_id_edit)
+      filter(gso_status == "Resolved" & system_id == input$system_id_edit)
   )
   
   # Closed issue table 
