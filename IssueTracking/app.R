@@ -461,6 +461,24 @@ server <- function(input, output, session) {
   observeEvent(rv$all_issues_row(), {
     updateTabsetPanel(session, "TabPanelID", selected = "add_edit")
     updateSelectInput(session, "system_id_edit", selected = rv$all_issues()$system_id[rv$all_issues_row()])
+    updateReactable("all_issues_table", selected = NA)
+    
+  }
+  )
+  
+  
+# Clear fields if system id updates in second tab 
+  observeEvent(input$system_id_edit, {
+    reset("component_id")
+    reset("issues_edit")
+    reset("issues_sub")
+    reset("date_observed")
+    reset("image_link")
+    reset("reporter_initials")
+    reset("priority")
+    reset("numeric_woid")
+    reset("inspector_note")
+    reset("gso_note")
     
   }
   )
