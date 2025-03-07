@@ -77,11 +77,20 @@ issue_choices <- issue_types %>%
   arrange(tolower(category), category) %>%
   pull
 
-# status
-status_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_status_lookup")) %>% 
-  select(status) %>%
+# cw status
+cw_status_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_cwstatus_lookup")) %>% 
+  select(cw_status) %>%
   pull
 
+# gso status
+gso_status_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_gsostatus_lookup")) %>% 
+  select(gso_status) %>%
+  pull
+
+# priority lookup
+priority_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_priority_lookup")) %>% 
+  select(priority) %>%
+  pull
 # wo id list
 woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") %>%
                       pull
@@ -111,7 +120,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     selectizeInput ("system_id", "System ID", choices = NULL),
                                                     selectInput("f_q", "Entry Fiscal Quarter", choices = c("All", q_list)),
                                                     selectInput("issues", "Issue Category", choices = c("All", issue_choices)),
-                                                    selectInput("status", "Status", choices = c("All", status_choices)),
+                                                    selectInput("status", "Cityworks Status", choices = c("All", cw_status_choices)),
                                                     downloadButton("download_table", "Download"),
                                                     actionButton("clear_all", "Clear All Fields")
                                                     
@@ -134,7 +143,8 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     dateInput("date_observed", "Date Observed", value = as.Date(NA)),
                                                     textInput("image_link", "Link to Image"),
                                                     textInput("reporter_initials", "Reporter Initials"),
-                                                    selectInput("priority", "Priority Level", choices = c("","Low", "Medium", "High"), selected = ""),
+                                                    selectInput("priority", "Priority Level", choices = c("", priority_choices), selected = ""),
+                                                    selectInput("gso_status", "GSO Status", choices = c("", gso_status_choices), selected = ""),
                                                     selectizeInput ("char_woid", "Cityworks Workorder ID", choices = NULL),
                                                     textAreaInput("inspector_note", "Inspector Notes", height = 93),
                                                     textAreaInput("gso_note", "GSO Notes", height = 93),
@@ -310,6 +320,8 @@ server <- function(input, output, session) {
     reset("char_woid")
     reset("inspector_note")
     reset("gso_note")
+    reset("gso_status")
+    
     
     removeModal()
   })
@@ -335,6 +347,7 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "image_link", value = rv$open_issues()$link_image[rv$open_issues_row()])
     updateTextAreaInput(session, "reporter_initials", value = rv$open_issues()$initials[rv$open_issues_row()])
     updateSelectInput(session, "priority", selected = rv$open_issues()$priority[rv$open_issues_row()])
+    updateSelectInput(session, "gso_status", selected = rv$open_issues()$gso_status[rv$open_issues_row()])
     updateSelectInput(session, "char_woid", selected = rv$open_issues()$workorder_id[rv$open_issues_row()])
     updateTextAreaInput(session, "inspector_note", value = rv$open_issues()$inspector_notes[rv$open_issues_row()])
     updateTextAreaInput(session, "gso_note", value = rv$open_issues()$notes[rv$open_issues_row()])
@@ -354,7 +367,7 @@ server <- function(input, output, session) {
   # Open issue table 
   output$open_issues_table <- renderReactable(
     reactable(rv$open_issues() %>%
-                select("Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "Status" = status),
+                select("Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "GSO Status" = gso_status, "CW Status" = status),
               theme = darkly(),
               fullWidth = TRUE,
               selection = "single",
@@ -396,6 +409,7 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "image_link", value = rv$closed_issues()$link_image[rv$closed_issues_row()])
     updateTextAreaInput(session, "reporter_initials", value = rv$closed_issues()$initials[rv$closed_issues_row()])
     updateSelectInput(session, "priority", selected = rv$closed_issues()$priority[rv$closed_issues_row()])
+    updateSelectInput(session, "gso_status", selected = rv$closed_issues()$gso_status[rv$closed_issues_row()])
     updateSelectInput(session, "char_woid", selected = rv$closed_issues()$workorder_id[rv$closed_issues_row()])
     updateTextAreaInput(session, "inspector_note", value = rv$closed_issues()$inspector_notes[rv$closed_issues_row()])
     updateTextAreaInput(session, "gso_note", value = rv$closed_issues()$notes[rv$closed_issues_row()])
@@ -413,7 +427,7 @@ server <- function(input, output, session) {
   # Closed issue table 
   output$closed_issues_table <- renderReactable(
     reactable(rv$closed_issues() %>%
-                select("Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "Status" = status),
+                select("Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "GSO Status" = gso_status, "CW Status" = status),
               theme = darkly(),
               fullWidth = TRUE,
               selection = "single",
@@ -461,7 +475,7 @@ server <- function(input, output, session) {
   # status filtering
   rv$status_filter <- reactive(
     if(input$status == "" | input$status == "All") {
-      c(status_choices, NA)          # show NAs too
+      c(cw_status_choices, NA)          # show NAs too
     } else{
       input$status
     }
@@ -518,7 +532,7 @@ server <- function(input, output, session) {
   # All issue table 
   output$all_issues_table <- renderReactable(
     reactable(rv$all_issues() %>%
-                select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "Status" = status),
+                select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Issue" = issue, "Entry Date" = date_entered, "GSO Status" = gso_status, "CW Status" = status, "Priority" = priority),
               theme = darkly(),
               fullWidth = TRUE,
               selection = "single",
