@@ -176,7 +176,7 @@ server <- function(input, output, session) {
   rv$wo_lookup <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.issue_wo_lookup"))
   
   # cityworks status
-  rv$cw_status <- reactive(dbGetQuery(cw_conn, paste("SELECT WORKORDERID, STATUS FROM Azteca.WORKORDER where WORKORDERID in ('", toString(rv$wo_lookup()$workorder_id),"')", sep = "")) %>%
+  rv$cw_status <- reactive(dbGetQuery(cw_conn, paste("SELECT WORKORDERID, STATUS FROM Azteca.WORKORDER where WORKORDERID in (", toString(paste("'", rv$wo_lookup()$workorder_id, "'", sep = "")),")", sep = "")) %>%
                              select(workorder_id = WORKORDERID, status = STATUS))
   
   # server-side selectizeinput for system ids across the tabs
@@ -326,7 +326,7 @@ server <- function(input, output, session) {
   # Reactive Filtering
   rv$system_filter <- reactive(
     if(input$system_id == "" | input$system_id == "All") {
-      system_id
+      c(system_id, NA)                # show NAs too
     } else{
       input$system_id
     }
@@ -335,7 +335,7 @@ server <- function(input, output, session) {
   # issue filtering
   rv$issue_filter <- reactive(
     if(input$issues == "" | input$issues == "All") {
-      issue_choices
+      c(issue_choices, NA)            # show NAs too
     } else{
       input$issues
     }
@@ -344,21 +344,11 @@ server <- function(input, output, session) {
   # status filtering
   rv$status_filter <- reactive(
     if(input$status == "" | input$status == "All") {
-      status_choices
+      c(status_choices, NA)          # show NAs too
     } else{
       input$status
     }
   )
-  
-  # quarter
-  rv$quarter_filter <- reactive(
-    if(input$f_q == "" | input$f_q == "All") {
-      status_choices
-    } else{
-      input$status
-    }
-  )
-  
   
   
 # Switch Tabs if a row from the first tab selected
