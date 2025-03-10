@@ -688,6 +688,21 @@ server <- function(input, output, session) {
               })
   )
   
+  # Download -----
+  output$download_table <- downloadHandler(
+    
+    filename = function() {
+      paste("IssueTrackingTable", "_", Sys.Date(), ".xlsx", sep = "")
+    },
+    content = function(filename){
+      
+      df_list <- list(rv$issues() %>%
+                        left_join(rv$cw_status(), by = "workorder_id") %>% 
+                        select("SystemID" = system_id, "CompID" = component_id, "DateObserved" = date_observed, "Reporter" = initials, "Issue" = issue, "EntryDate" = date_entered, "GSOStatus" = gso_status, "CWStatus" = status, "Priority" = priority, "InspectorNote" = inspector_notes, "GSONotes" = notes, "ImageLink" = link_image)
+      )
+      write.xlsx(x = df_list , file = filename, row.names = FALSE)
+    }
+  )
   
   # Clear buttons -----
   # first tab
