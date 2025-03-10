@@ -353,7 +353,8 @@ server <- function(input, output, session) {
   rv$open_issues <- reactive(
     rv$issues() %>%
       left_join(rv$cw_status(), by = "workorder_id") %>%
-      filter((is.na(gso_status) | gso_status == "Pending"| gso_status == "On Hold") & system_id == input$system_id_edit)
+      filter((is.na(gso_status) | gso_status == "Pending"| gso_status == "On Hold") & system_id == input$system_id_edit) %>%
+      arrange(desc(date_entered))
   
   )
   
@@ -455,7 +456,8 @@ server <- function(input, output, session) {
   rv$closed_issues <- reactive(
     rv$issues() %>%
       left_join(rv$cw_status(), by = "workorder_id") %>%
-      filter(gso_status == "Resolved" & system_id == input$system_id_edit)
+      filter(gso_status == "Resolved" & system_id == input$system_id_edit) %>%
+      arrange(desc(date_entered))
   )
   
   # Closed issue table 
@@ -739,7 +741,8 @@ server <- function(input, output, session) {
         filter(category %in% rv$issue_filter()) %>%
         filter(status %in% rv$status_filter()) %>%
         filter(gso_status %in% rv$gso_status_filter()) %>%
-        filter(priority %in% rv$priority_filter())
+        filter(priority %in% rv$priority_filter()) %>%
+        arrange(desc(date_entered))
       
     } else {
       rv$issues() %>%
@@ -749,7 +752,8 @@ server <- function(input, output, session) {
         filter(status %in% rv$status_filter()) %>%
         filter(gso_status %in% rv$gso_status_filter()) %>%
         filter(date_entered <= rv$end_date() & date_entered >= rv$start_date()) %>%
-        filter(priority %in% rv$priority_filter())
+        filter(priority %in% rv$priority_filter()) %>%
+        arrange(desc(date_entered))
       
     }
 
