@@ -102,12 +102,14 @@ cw_status_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issu
   pull
 
 # gso status
-gso_status_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_gsostatus_lookup")) %>% 
+gso_status <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_gsostatus_lookup"))
+gso_status_choices <- gso_status %>% 
   select(gso_status) %>%
   pull
 
 # priority lookup
-priority_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_priority_lookup")) %>% 
+priority <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_priority_lookup")) 
+priority_choices <- priority %>% 
   select(priority) %>%
   pull
 # wo id list
@@ -118,7 +120,7 @@ woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) FROM Azteca.WORKORDER 
 
 # Define UI
 ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", theme = shinytheme("cyborg"),
-                                       tabPanel("Issues Table", value = "status", 
+                                       tabPanel("Issues Table", value = "status",  ## First tab -----
                                                 sidebarLayout(
                                                   sidebarPanel(
                                                     selectizeInput ("system_id", "System ID", choices = NULL),
@@ -140,7 +142,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                   )
                                                 )
                                        ),
-                                       tabPanel("Add/Edit Issues", value = "add_edit", 
+                                       tabPanel("Add/Edit Issues", value = "add_edit", ## Second tab -----
                                                 sidebarLayout(
                                                   sidebarPanel(
                                                     selectizeInput ("system_id_edit", "System ID", choices = NULL),
@@ -156,7 +158,8 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     selectizeInput ("char_woid", "Cityworks Workorder ID", choices = NULL),
                                                     textAreaInput("inspector_note", "Inspector Notes", height = 100),
                                                     textAreaInput("gso_note", "GSO Notes", height = 100),
-                                                    disabled(actionButton("submit_btn", "Save/Edit Issue")),
+                                                    #disabled(actionButton("submit_btn", "Save/Edit Issue")),
+                                                    actionButton("submit_btn", "Save/Edit Issue"),
                                                     actionButton("clear_edit", "Clear All Fields"),
                                                     actionButton("update_wo", "Update WO IDs"),
                                                     width = 3
@@ -205,11 +208,8 @@ server <- function(input, output, session) {
   # all issues
   rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
   
-  # issue lookup
-  rv$wo_lookup <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.issue_wo_lookup"))
-  
   # cityworks status
-  rv$cw_status <- reactive(dbGetQuery(cw_conn, paste("SELECT WORKORDERID, STATUS FROM Azteca.WORKORDER where WORKORDERID in (", toString(paste("'", rv$wo_lookup()$workorder_id, "'", sep = "")),")", sep = "")) %>%
+  rv$cw_status <- reactive(dbGetQuery(cw_conn, paste("SELECT WORKORDERID, STATUS FROM Azteca.WORKORDER where WORKORDERID in (", toString(paste("'", rv$issues()$workorder_id, "'", sep = "")),")", sep = "")) %>%
                              select(workorder_id = WORKORDERID, status = STATUS))
   
   # server-side selectizeinput for system ids across the tabs
@@ -231,7 +231,11 @@ server <- function(input, output, session) {
   
   #process text field to prevent sql injection
   rv$inspector_note <- reactive(gsub('\'', '\'\'',  input$inspector_note))
-  rv$input_note  <- reactive(special_char_replace(rv$inspector_note()))
+  rv$inspector_note_trimmed  <- reactive(special_char_replace(rv$inspector_note()))
+  
+  rv$gso_note <- reactive(gsub('\'', '\'\'',  input$gso_note))
+  rv$gso_note_trimmed  <- reactive(special_char_replace(rv$gso_note()))
+  
 
   #show component IDs and Issues based on Systems + Issue Category 
   #component IDs
@@ -420,6 +424,70 @@ server <- function(input, output, session) {
                 )
               })
   )
+  
+  ## Add/Edit Open/Closed issues ----
+  # return ids
+  rv$input_issue_type_uid <- reactive(issue_types %>%
+    filter(issue == input$issues_sub) %>%
+    select(issue_type_uid) %>%
+    pull)
+  
+  rv$input_priority_uid <- reactive(priority %>%
+    filter(priority == input$priority) %>%
+    select(priority_uid) %>%
+    pull)
+  
+  rv$input_gsostatus_uid <- reactive(gso_status %>%
+    filter(gso_status == input$gso_status_edit) %>%
+    select(gsostatus_uid) %>%
+    pull)
+  # populate component combo
+  rv$new_comp_id <- reactive(rv$asset_comp() %>%
+                                       filter(asset_comp_code ==  input$component_id) %>%
+                                       select(component_id) %>%
+                                       pull)
+  
+  # On click "submit_btn"
+  observeEvent(input$submit_btn, {
+    if(is.null(rv$open_issues_row()) & is.null(rv$closed_issues_row())) {
+    
+      new_issue_df <- data.frame(system_id = input$system_id_edit,
+                                 component_id = ifelse(length(rv$new_comp_id()) == 0, NA, rv$new_comp_id()),
+                                 issue_type_uid = rv$input_issue_type_uid(),
+                                 date_observed = input$date_observed,
+                                 link_image = ifelse(input$image_link == '', NA, input$image_link),
+                                 inspector_notes = ifelse(rv$inspector_note_trimmed() == '', NA, rv$inspector_note_trimmed()),
+                                 notes = ifelse(rv$gso_note_trimmed() == '', NA, rv$gso_note_trimmed()),
+                                 initials = ifelse(input$reporter_initials == '', NA, input$reporter_initials),
+                                 priority_uid = ifelse(length(rv$input_priority_uid()) == 0, NA, rv$input_priority_uid()),
+                                 date_entered = Sys.Date(),
+                                 gsostatus_uid = ifelse(length(rv$input_gsostatus_uid()) == 0, NA, rv$input_gsostatus_uid()),
+                                 workorder_id = ifelse(input$char_woid == '', NA, input$char_woid)
+                                 )
+      
+      odbc::dbWriteTable(conn, Id(schema = "fieldwork", table = "issues"), new_issue_df, append= TRUE, row.names = FALSE )
+      
+  
+    }
+    
+    
+    
+    
+  })
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
