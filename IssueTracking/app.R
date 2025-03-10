@@ -373,6 +373,8 @@ server <- function(input, output, session) {
               defaultPageSize = 25,
               height = 450,
               columns = list(
+                "Issue" = colDef(width = 350),
+                "Comp ID" = colDef(width = 150),
                 "GSO Status" = colDef(
                   style = function(value) {
                     if (value == "Resolved") {
@@ -475,6 +477,8 @@ server <- function(input, output, session) {
               defaultPageSize = 25,
               height = 450,
               columns = list(
+                "Issue" = colDef(width = 350),
+                "Comp ID" = colDef(width = 150),
                 "GSO Status" = colDef(
                   style = function(value) {
                     if (value == "Resolved") {
@@ -763,7 +767,7 @@ server <- function(input, output, session) {
   # All issue table 
   output$all_issues_table <- renderReactable(
     reactable(rv$all_issues() %>%
-                select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Issue" = issue, "Entry Date" = date_entered, "Priority" = priority, "GSO Status" = gso_status, "CW Status" = status),
+                select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Issue" = issue,"Priority" = priority, "Entry Date" = date_entered, "GSO Status" = gso_status, "CW Status" = status),
               theme = darkly(),
               fullWidth = TRUE,
               selection = "single",
@@ -774,8 +778,9 @@ server <- function(input, output, session) {
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
               columns = list(
-                "Issue" = colDef(width = 200),
+                "Issue" = colDef(width = 350),
                 "Comp ID" = colDef(width = 200),
+                "Date Observed" = colDef(width = 150),
                 "GSO Status" = colDef(
                   style = function(value) {
                     if (value == "Resolved") {
