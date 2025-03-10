@@ -123,12 +123,15 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     selectInput("status", "Cityworks Status", choices = c("All", cw_status_choices)),
                                                     selectInput("gso_status", "GSO Status", choices = c("All", gso_status_choices)),
                                                     downloadButton("download_table", "Download"),
-                                                    actionButton("clear_all", "Clear All Fields")
+                                                    actionButton("clear_all", "Clear All Fields"),
+                                                    width = 3
                                                     
                                                   ),
                                                   mainPanel(
                                                     strong(span(textOutput("table_name"), style = "font-size:22px")),
-                                                    reactableOutput("all_issues_table")
+                                                    reactableOutput("all_issues_table"),
+                                                    width = 9
+                                                    
 
                                                   )
                                                 )
@@ -147,11 +150,12 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     selectInput("priority", "Priority Level", choices = c("", priority_choices), selected = ""),
                                                     selectInput("gso_status_edit", "GSO Status", choices = c("", gso_status_choices), selected = ""),
                                                     selectizeInput ("char_woid", "Cityworks Workorder ID", choices = NULL),
-                                                    textAreaInput("inspector_note", "Inspector Notes", height = 93),
-                                                    textAreaInput("gso_note", "GSO Notes", height = 93),
+                                                    textAreaInput("inspector_note", "Inspector Notes", height = 100),
+                                                    textAreaInput("gso_note", "GSO Notes", height = 100),
                                                     disabled(actionButton("submit_btn", "Save/Edit Issue")),
                                                     actionButton("clear_edit", "Clear All Fields"),
-                                                    actionButton("update_wo", "Update Workorder IDs")
+                                                    actionButton("update_wo", "Update WO IDs"),
+                                                    width = 3
                                                     
                                                   ),
                                                   mainPanel(
@@ -160,7 +164,9 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                                      h4(textOutput("current_header")),
                                                                      reactableOutput("open_issues_table"),
                                                                      h4(textOutput("past_header")), 
-                                                                     reactableOutput("closed_issues_table"))
+                                                                     reactableOutput("closed_issues_table")),
+                                                    width = 9
+                                                    
                                                   )
                                                 )
                                                 )
@@ -295,6 +301,7 @@ server <- function(input, output, session) {
   observeEvent(input$confirm_clear_pcs, {
     reset("system_id")
     reset("status")
+    reset("gso_status")
     reset("issues")
     reset("f_q")
     
@@ -378,7 +385,7 @@ server <- function(input, output, session) {
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
-              height = 430,
+              height = 450,
               details = function(index) {
                 note_link <- rv$open_issues()[rv$open_issues()$issue_uid == rv$open_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
@@ -438,7 +445,7 @@ server <- function(input, output, session) {
               showPageSizeOptions = TRUE,
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
-              height = 430,
+              height = 450,
               details = function(index) {
                 note_link <- rv$closed_issues()[rv$closed_issues()$issue_uid == rv$closed_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
