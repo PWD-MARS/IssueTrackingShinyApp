@@ -74,6 +74,10 @@ special_char_replace <- function(note){
   
 }
 
+#this function adds a little red star to indicate that a field is required. It uses HTML, hence "html_req"
+html_req <- function(label){
+  HTML(paste(label, tags$span(style="color:red", tags$sup("*"))))
+}
 
 # Global variables -----
 
@@ -145,16 +149,16 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                        tabPanel("Add/Edit Issues", value = "add_edit", ## Second tab -----
                                                 sidebarLayout(
                                                   sidebarPanel(
-                                                    selectizeInput ("system_id_edit", "System ID", choices = NULL),
+                                                    selectizeInput ("system_id_edit", html_req("System ID"), choices = NULL),
                                                     selectInput("component_id", "Component ID", choices = "", selected = NULL),
-                                                    selectInput("issues_edit", "Issue Category", choices = c("", issue_choices), selected = ''),
+                                                    selectInput("issues_edit", html_req("Issue Category"), choices = c("", issue_choices), selected = ''),
                                                     conditionalPanel(condition = "input.issues_edit !== ''",
-                                                                     selectInput("issues_sub", "Issue", choices = "", selected = NULL)),
-                                                    dateInput("date_observed", "Date Observed", value = as.Date(NA)),
+                                                                     selectInput("issues_sub", html_req("Issue"), choices = "", selected = NULL)),
+                                                    dateInput("date_observed", html_req("Date Observed"), value = as.Date(NA)),
                                                     textInput("image_link", "Link to Image"),
-                                                    textInput("reporter_initials", "Reporter Initials"),
-                                                    selectInput("priority", "Priority Level", choices = c("", priority_choices), selected = ""),
-                                                    selectInput("gso_status_edit", "GSO Status", choices = c("", gso_status_choices), selected = ""),
+                                                    textInput("reporter_initials", html_req("Reporter Initials")),
+                                                    selectInput("priority", html_req("Priority Level"), choices = c("", priority_choices), selected = ""),
+                                                    selectInput("gso_status_edit", html_req("GSO Status"), choices = c("", gso_status_choices), selected = ""),
                                                     selectizeInput ("char_woid", "Cityworks Workorder ID", choices = NULL),
                                                     textAreaInput("inspector_note", "Inspector Notes", height = 100),
                                                     textAreaInput("gso_note", "GSO Notes", height = 100),
@@ -162,6 +166,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     actionButton("submit_btn", "Save/Edit Issue"),
                                                     actionButton("clear_edit", "Clear All Fields"),
                                                     actionButton("update_wo", "Update WO IDs"),
+                                                    fluidRow(HTML(paste(html_req(""), " indicates required field for Submission. "))),
                                                     width = 3
                                                     
                                                   ),
@@ -255,6 +260,20 @@ server <- function(input, output, session) {
                                pull)
   
   observe(updateSelectInput(session, "component_id", choices = c("", rv$asset_combo())))
+  
+  
+  # toggle submit button
+  observe(toggleState(id = "submit_btn", input$system_id_edit != ""
+                      & input$issues_edit != ""
+                      & input$issues_sub != "" 
+                      & length(input$date_observed) > 0
+                      & input$reporter_initials != ''
+                      & input$priority != ''
+                      & input$gso_status_edit != ''
+                      
+                      
+    
+  ))
   
   
   #add/edit button toggle
