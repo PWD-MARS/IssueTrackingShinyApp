@@ -577,6 +577,10 @@ server <- function(input, output, session) {
               })
   )
   
+  #add/edit button toggle
+  rv$label <- reactive(if(!is.null(rv$open_issues_row()) | !is.null(rv$closed_issues_row())) "Edit Selected" else "Add New")
+  observe(updateActionButton(session, "submit_btn", label = rv$label()))
+  
 }
 
 # Run the application
