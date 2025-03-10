@@ -317,7 +317,11 @@ server <- function(input, output, session) {
   
   #table header-all
   output$table_name <- renderText(
-    paste("All Issues")
+    if(input$f_q == "All" | input$f_q == "") {
+      paste("Issues to Date")
+    } else {
+      paste("Issues Entered from", rv$start_date(), "to", rv$end_date(), sep = " ")
+    }
   )
   
   
