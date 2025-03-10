@@ -394,7 +394,10 @@ server <- function(input, output, session) {
                 ),
                 "CW Status" = colDef(
                   style = function(value) {
-                    if (value == "CLOSED" | value == "WORK COMPLETE") {
+                    if (is.na(value)) {
+                      # Handling NA values; do nothing!
+                    } else if (value == "CLOSED" | value == "WORK COMPLETE") {
+
                       return(list(background = "green", color = "white", fontweight = "bold"))
                     } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
                       return(list(background = "lightgreen", color = "black", fontweight = "bold"))
@@ -498,7 +501,9 @@ server <- function(input, output, session) {
                 ),
                 "CW Status" = colDef(
                   style = function(value) {
-                    if (value == "CLOSED" | value == "WORK COMPLETE") {
+                    if (is.na(value)) {
+                      # Handling NA values; do nothing!
+                    } else if (value == "CLOSED" | value == "WORK COMPLETE") {
                       return(list(background = "green", color = "white", fontweight = "bold"))
                     } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
                       return(list(background = "lightgreen", color = "black", fontweight = "bold"))
@@ -800,7 +805,9 @@ server <- function(input, output, session) {
                 ),
                 "CW Status" = colDef(
                   style = function(value) {
-                    if (value == "CLOSED" | value == "WORK COMPLETE") {
+                    if (is.na(value)) {
+                      # Handling NA values; do nothing!
+                    } else if (value == "CLOSED" | value == "WORK COMPLETE") {
                       return(list(background = "green", color = "white", fontweight = "bold"))
                     } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
                       return(list(background = "lightgreen", color = "black", fontweight = "bold"))
