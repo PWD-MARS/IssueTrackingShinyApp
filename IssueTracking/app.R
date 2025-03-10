@@ -270,9 +270,6 @@ server <- function(input, output, session) {
                       & input$reporter_initials != ''
                       & input$priority != ''
                       & input$gso_status_edit != ''
-                      
-                      
-    
   ))
   
   
@@ -485,6 +482,24 @@ server <- function(input, output, session) {
                                  )
       
       odbc::dbWriteTable(conn, Id(schema = "fieldwork", table = "issues"), new_issue_df, append= TRUE, row.names = FALSE )
+      
+      # reset and pull
+      
+      rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
+      reset("component_id")
+      reset("issues_edit")
+      reset("issues_sub")
+      reset("date_observed")
+      reset("image_link")
+      reset("reporter_initials")
+      reset("priority")
+      reset("char_woid")
+      reset("inspector_note")
+      reset("gso_note")
+      reset("gso_status_edit")
+      reset("open_issues_table")
+      reset("closed_issues_table")
+      
       
   
     }
