@@ -82,7 +82,7 @@ html_req <- function(label){
 # Global variables -----
 
 # fiscal quarter lookup
-q_list  <- dbGetQuery(conn,"select * from admin.tbl_fiscal_quarter_lookup") %>%
+q_list  <- dbGetQuery(conn,"select * from admin.tbl_fiscal_quarter_lookup where fiscal_quarter_lookup_uid > 35") %>%
   select(fiscal_quarter) %>%
   arrange(tolower(fiscal_quarter), fiscal_quarter) %>%
   pull
