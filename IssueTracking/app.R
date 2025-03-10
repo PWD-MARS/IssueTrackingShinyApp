@@ -132,6 +132,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     selectInput("issues", "Issue Category", choices = c("All", issue_choices)),
                                                     selectInput("status", "Cityworks Status", choices = c("All", cw_status_choices)),
                                                     selectInput("gso_status", "GSO Status", choices = c("All", gso_status_choices)),
+                                                    selectInput("priority_filter", "Priority Level", choices = c("All", priority_choices)),
                                                     downloadButton("download_table", "Download"),
                                                     actionButton("clear_all", "Clear All Fields"),
                                                     width = 3
@@ -370,6 +371,47 @@ server <- function(input, output, session) {
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
               height = 450,
+              columns = list(
+                "GSO Status" = colDef(
+                  style = function(value) {
+                    if (value == "Resolved") {
+                      return(list(background = "green", color = "white", fontweight = "bold"))
+                    } else if (value == "On Hold") {
+                      return(list(background = "yellow", color = "black", fontweight = "bold"))
+                    } else if (value == "Pending") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                ),
+                "CW Status" = colDef(
+                  style = function(value) {
+                    if (value == "CLOSED" | value == "WORK COMPLETE") {
+                      return(list(background = "green", color = "white", fontweight = "bold"))
+                    } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
+                      return(list(background = "lightgreen", color = "black", fontweight = "bold"))
+                    } else if (value == "CANCEL") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                ),
+                "Priority" = colDef(
+                  style = function(value) {
+                    if (value == "Low") {
+                      return(list(background = "pink", color = "black", fontweight = "bold"))
+                    } else if (value == "Medium") {
+                      return(list(background = "orange", color = "black", fontweight = "bold"))
+                    } else if (value == "High") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                )
+              ),
               details = function(index) {
                 note_link <- rv$open_issues()[rv$open_issues()$issue_uid == rv$open_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
@@ -430,6 +472,47 @@ server <- function(input, output, session) {
               pageSizeOptions = c(25, 50, 100),
               defaultPageSize = 25,
               height = 450,
+              columns = list(
+                "GSO Status" = colDef(
+                  style = function(value) {
+                    if (value == "Resolved") {
+                      return(list(background = "green", color = "white", fontweight = "bold"))
+                    } else if (value == "On Hold") {
+                      return(list(background = "yellow", color = "black", fontweight = "bold"))
+                    } else if (value == "Pending") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                ),
+                "CW Status" = colDef(
+                  style = function(value) {
+                    if (value == "CLOSED" | value == "WORK COMPLETE") {
+                      return(list(background = "green", color = "white", fontweight = "bold"))
+                    } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
+                      return(list(background = "lightgreen", color = "black", fontweight = "bold"))
+                    } else if (value == "CANCEL") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                ),
+                "Priority" = colDef(
+                  style = function(value) {
+                    if (value == "Low") {
+                      return(list(background = "pink", color = "black", fontweight = "bold"))
+                    } else if (value == "Medium") {
+                      return(list(background = "orange", color = "black", fontweight = "bold"))
+                    } else if (value == "High") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                )
+              ),
               details = function(index) {
                 note_link <- rv$closed_issues()[rv$closed_issues()$issue_uid == rv$closed_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
@@ -610,6 +693,16 @@ server <- function(input, output, session) {
   )
   
   
+  # gso status filtering
+  rv$priority_filter <- reactive(
+    if(input$priority_filter == "" | input$priority_filter == "All") {
+      c(priority_choices, NA)          # show NAs too
+    } else{
+      input$priority_filter
+    }
+  )
+  
+  
 # Switch Tabs if a row from the first tab selected
   observeEvent(rv$all_issues_row(), {
     updateTabsetPanel(session, "TabPanelID", selected = "add_edit")
@@ -645,7 +738,8 @@ server <- function(input, output, session) {
         filter(system_id %in% rv$system_filter()) %>%
         filter(category %in% rv$issue_filter()) %>%
         filter(status %in% rv$status_filter()) %>%
-        filter(gso_status %in% rv$gso_status_filter())
+        filter(gso_status %in% rv$gso_status_filter()) %>%
+        filter(priority %in% rv$priority_filter())
       
     } else {
       rv$issues() %>%
@@ -654,7 +748,9 @@ server <- function(input, output, session) {
         filter(category %in% rv$issue_filter()) %>%
         filter(status %in% rv$status_filter()) %>%
         filter(gso_status %in% rv$gso_status_filter()) %>%
-        filter(date_entered <= rv$end_date() & date_entered >= rv$start_date())
+        filter(date_entered <= rv$end_date() & date_entered >= rv$start_date()) %>%
+        filter(priority %in% rv$priority_filter())
+      
     }
 
     
@@ -663,7 +759,7 @@ server <- function(input, output, session) {
   # All issue table 
   output$all_issues_table <- renderReactable(
     reactable(rv$all_issues() %>%
-                select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Issue" = issue, "Entry Date" = date_entered, "GSO Status" = gso_status, "CW Status" = status, "Priority" = priority),
+                select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Issue" = issue, "Entry Date" = date_entered, "Priority" = priority, "GSO Status" = gso_status, "CW Status" = status),
               theme = darkly(),
               fullWidth = TRUE,
               selection = "single",
@@ -675,7 +771,46 @@ server <- function(input, output, session) {
               defaultPageSize = 25,
               columns = list(
                 "Issue" = colDef(width = 200),
-                "Comp ID" = colDef(width = 200)
+                "Comp ID" = colDef(width = 200),
+                "GSO Status" = colDef(
+                  style = function(value) {
+                    if (value == "Resolved") {
+                      return(list(background = "green", color = "white", fontweight = "bold"))
+                    } else if (value == "On Hold") {
+                      return(list(background = "yellow", color = "black", fontweight = "bold"))
+                    } else if (value == "Pending") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                ),
+                "CW Status" = colDef(
+                  style = function(value) {
+                    if (value == "CLOSED" | value == "WORK COMPLETE") {
+                      return(list(background = "green", color = "white", fontweight = "bold"))
+                    } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
+                      return(list(background = "lightgreen", color = "black", fontweight = "bold"))
+                    } else if (value == "CANCEL") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                ),
+                "Priority" = colDef(
+                  style = function(value) {
+                    if (value == "Low") {
+                      return(list(background = "pink", color = "black", fontweight = "bold"))
+                    } else if (value == "Medium") {
+                      return(list(background = "orange", color = "black", fontweight = "bold"))
+                    } else if (value == "High") {
+                      return(list(background = "red", color = "white", fontweight = "bold"))
+                    } else {
+                      # Handle any unexpected values gracefully (default to white)
+                    }
+                  }
+                )
               ),
               details = function(index) {
                 note_link <- rv$all_issues()[rv$all_issues()$issue_uid == rv$all_issues()$issue_uid[index], ] %>%
