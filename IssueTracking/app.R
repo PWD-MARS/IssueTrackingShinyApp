@@ -166,7 +166,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     actionButton("submit_btn", "Save/Edit Issue"),
                                                     actionButton("clear_edit", "Clear All Fields"),
                                                     actionButton("update_wo", "Update WO IDs"),
-                                                    fluidRow(HTML(paste(html_req(""), " indicates required field for Submission. "))),
+                                                    fluidRow(HTML(paste(html_req(""), " indicates required field for submission. "))),
                                                     width = 3
                                                     
                                                   ),
@@ -502,6 +502,36 @@ server <- function(input, output, session) {
       
       
   
+    } else if (!is.null(rv$open_issues_row()) & is.null(rv$closed_issues_row())) {
+      
+      edit_open_issue_query <- paste0("Update fieldwork.issues SET component_id= ", ifelse(length(rv$new_comp_id()) == 0, 'NULL', paste("'", rv$new_comp_id(), "'", sep = "")), 
+                                      ", issue_type_uid = ", rv$input_issue_type_uid(), ", date_observed = '", input$date_observed, "', link_image = '", input$image_link,
+                                      "', inspector_notes = ", ifelse(rv$inspector_note_trimmed() == '', 'NULL', paste("'",rv$inspector_note_trimmed(),"'", sep = "")),
+                                      ", initials = ", paste("'", input$reporter_initials,"'", sep = ""),
+                                      ", notes = ", ifelse(rv$gso_note_trimmed() == '', 'NULL', paste("'", rv$gso_note_trimmed(),"'", sep = "")),
+                                      ", priority_uid = ", rv$input_priority_uid(),
+                                      ", gsostatus_uid = ", rv$input_gsostatus_uid(),
+                                      ", workorder_id = ", ifelse(input$char_woid == '', 'NULL', paste("'", input$char_woid, "'", sep = "")), " where issue_uid = " , rv$open_issues()$issue_uid[rv$open_issues_row()], sep = "")
+      odbc::dbGetQuery(conn, edit_open_issue_query)
+      
+      # reset and pull
+      
+      
+      rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
+      reset("component_id")
+      reset("issues_edit")
+      reset("issues_sub")
+      reset("date_observed")
+      reset("image_link")
+      reset("reporter_initials")
+      reset("priority")
+      reset("char_woid")
+      reset("inspector_note")
+      reset("gso_note")
+      reset("gso_status_edit")
+      reset("open_issues_table")
+      reset("closed_issues_table")
+      
     }
     
     
@@ -510,21 +540,7 @@ server <- function(input, output, session) {
   })
   
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
   # All Issues Sub Table ------
   ### Reactive Filtering
   
