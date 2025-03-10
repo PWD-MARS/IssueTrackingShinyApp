@@ -379,7 +379,7 @@ server <- function(input, output, session) {
                     } else if (value == "On Hold") {
                       return(list(background = "yellow", color = "black", fontweight = "bold"))
                     } else if (value == "Pending") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
@@ -392,7 +392,7 @@ server <- function(input, output, session) {
                     } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
                       return(list(background = "lightgreen", color = "black", fontweight = "bold"))
                     } else if (value == "CANCEL") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
@@ -405,7 +405,7 @@ server <- function(input, output, session) {
                     } else if (value == "Medium") {
                       return(list(background = "orange", color = "black", fontweight = "bold"))
                     } else if (value == "High") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
@@ -480,7 +480,7 @@ server <- function(input, output, session) {
                     } else if (value == "On Hold") {
                       return(list(background = "yellow", color = "black", fontweight = "bold"))
                     } else if (value == "Pending") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
@@ -493,7 +493,7 @@ server <- function(input, output, session) {
                     } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
                       return(list(background = "lightgreen", color = "black", fontweight = "bold"))
                     } else if (value == "CANCEL") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
@@ -506,7 +506,7 @@ server <- function(input, output, session) {
                     } else if (value == "Medium") {
                       return(list(background = "orange", color = "black", fontweight = "bold"))
                     } else if (value == "High") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
@@ -779,7 +779,7 @@ server <- function(input, output, session) {
                     } else if (value == "On Hold") {
                       return(list(background = "yellow", color = "black", fontweight = "bold"))
                     } else if (value == "Pending") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
@@ -792,7 +792,7 @@ server <- function(input, output, session) {
                     } else if (value == "REQUESTED" | value == "ASSIGNED" | value == "SCHEDULED") {
                       return(list(background = "lightgreen", color = "black", fontweight = "bold"))
                     } else if (value == "CANCEL") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
@@ -805,7 +805,7 @@ server <- function(input, output, session) {
                     } else if (value == "Medium") {
                       return(list(background = "orange", color = "black", fontweight = "bold"))
                     } else if (value == "High") {
-                      return(list(background = "red", color = "white", fontweight = "bold"))
+                      return(list(background = "#A70D2A", color = "white", fontweight = "bold"))
                     } else {
                       # Handle any unexpected values gracefully (default to white)
                     }
