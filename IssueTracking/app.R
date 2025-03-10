@@ -5,7 +5,7 @@
 # Set Up -----
 # Load necessary libraries
 # SET UP
-##0: load libraries --------------
+## Load libraries --------------
 #shiny
 library(shiny)
 #pool for database connections
@@ -36,7 +36,7 @@ library(renv)
 #Not in logical
 `%!in%` <- Negate(`%in%`)
 
-##1: database connection and global options --------
+# Database connection and global options --------
 
 #set default page length for datatables
 options(DT.options = list(pageLength = 15))
@@ -57,6 +57,25 @@ cw_conn <- dbConnect(odbc(),
                  Database = "PWD_Cityworks",
                  uid = Sys.getenv("cw_uid"),
                  pwd= Sys.getenv("cw_pwd"))
+
+
+#disconnect from db on stop 
+onStop(function(){
+  poolClose(conn)
+})
+
+# #replace special characters with friendlier characters
+special_char_replace <- function(note){
+  
+  note_fix <- note %>%
+    str_replace_all(c("•" = "-", "ï‚§" = "-", "“" = '"', '”' = '"'))
+  
+  return(note_fix)
+  
+}
+
+
+# Global variables -----
 
 # fiscal quarter lookup
 q_list  <- dbGetQuery(conn,"select * from admin.tbl_fiscal_quarter_lookup") %>%
@@ -94,21 +113,6 @@ priority_choices <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue
 # wo id list
 woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") %>%
                       pull
-
-#disconnect from db on stop 
-onStop(function(){
-  poolClose(conn)
-})
-
-# #replace special characters with friendlier characters
-special_char_replace <- function(note){
-  
-  note_fix <- note %>%
-    str_replace_all(c("•" = "-", "ï‚§" = "-", "“" = '"', '”' = '"'))
-  
-  return(note_fix)
-  
-}
 
 # UI -----
 
@@ -187,7 +191,9 @@ tags$style(HTML("
 # Server -----
 server <- function(input, output, session) {
   
-  ## initialzie reactive values ----
+  
+  # Reactive Updates (toggles, labells, input options) -----
+  ## initialzie reactive values 
   rv <- reactiveValues()
   
   # row references 
@@ -227,7 +233,7 @@ server <- function(input, output, session) {
   rv$inspector_note <- reactive(gsub('\'', '\'\'',  input$inspector_note))
   rv$input_note  <- reactive(special_char_replace(rv$inspector_note()))
 
-  #show component IDs and Issues based on Systems + Issue Category ------
+  #show component IDs and Issues based on Systems + Issue Category 
   #component IDs
   
   # toggle component id-activate if a system is selected
@@ -246,6 +252,12 @@ server <- function(input, output, session) {
   
   observe(updateSelectInput(session, "component_id", choices = c("", rv$asset_combo())))
   
+  
+  #add/edit button toggle
+  rv$label <- reactive(if(!is.null(rv$open_issues_row()) | !is.null(rv$closed_issues_row())) "Edit Selected" else "Add New")
+  observe(updateActionButton(session, "submit_btn", label = rv$label()))
+  
+  
   # update sub issue
   rv$sub_issue <- reactive(issue_types %>%
                              filter(category == input$issues_edit) %>%
@@ -253,7 +265,7 @@ server <- function(input, output, session) {
                              pull)
   observe(updateSelectInput(session, "issues_sub", choices = c("", rv$sub_issue())))
   
-  # Fiscal Quarter Processing -----
+  # Fiscal Quarter Processing 
   #get quarters as dates
   rv$start_quarter <- reactive(case_when(str_sub(input$f_q, 5, 7) == "Q3" ~ "1/1", 
                                                  str_sub(input$f_q, 5, 7) == "Q4" ~ "4/1", 
@@ -272,7 +284,7 @@ server <- function(input, output, session) {
   rv$start_date <- reactive(lubridate::mdy(paste0(rv$start_quarter(), "/", ifelse(str_sub(input$f_q, 5, 7) == "Q1" | str_sub(input$f_q, 5, 7) == "Q2", as.numeric(rv$year())-1, rv$year()))))
   rv$end_date <- reactive(lubridate::mdy(paste0(rv$end_quarter(), "/", ifelse(str_sub(input$f_q, 5, 7) == "Q1" | str_sub(input$f_q, 5, 7) == "Q2", as.numeric(rv$year())-1, rv$year()))))
   
-  # headers and sub tables -----
+  # headers and sub tables 
   #table header-current
   output$current_header <- renderText(
     paste("Pending/On Hold Issues for ", input$system_id_edit)
@@ -286,54 +298,6 @@ server <- function(input, output, session) {
   output$table_name <- renderText(
     paste("All Issues")
   )
-  
-  
-  # Clear buttons -----
-  # first tab
-  observeEvent(input$clear_all, {
-    showModal(modalDialog(title = "Clear All Fields", 
-                          "Are you sure you want to clear all fields on this tab?", 
-                          modalButton("No"), 
-                          actionButton("confirm_clear_pcs", "Yes")))
-  })
-  
-  
-  observeEvent(input$confirm_clear_pcs, {
-    reset("system_id")
-    reset("status")
-    reset("gso_status")
-    reset("issues")
-    reset("f_q")
-    
-    removeModal()
-  })
-  
-  # second tab
-  observeEvent(input$clear_edit, {
-    showModal(modalDialog(title = "Clear All Fields", 
-                          "Are you sure you want to clear all fields on this tab?", 
-                          modalButton("No"), 
-                          actionButton("confirm_clear_pcs", "Yes")))
-  })
-  
-  observeEvent(input$confirm_clear_pcs, {
-    reset("system_id_edit")
-    reset("component_id")
-    reset("issues_edit")
-    reset("issues_sub")
-    reset("date_observed")
-    reset("image_link")
-    reset("reporter_initials")
-    reset("priority")
-    reset("char_woid")
-    reset("inspector_note")
-    reset("gso_note")
-    reset("gso_status_edit")
-    
-    
-    removeModal()
-  })
-  
   
   
   # Open Issues Sub Table -----
@@ -577,10 +541,55 @@ server <- function(input, output, session) {
               })
   )
   
-  #add/edit button toggle
-  rv$label <- reactive(if(!is.null(rv$open_issues_row()) | !is.null(rv$closed_issues_row())) "Edit Selected" else "Add New")
-  observe(updateActionButton(session, "submit_btn", label = rv$label()))
   
+  # Clear buttons -----
+  # first tab
+  observeEvent(input$clear_all, {
+    showModal(modalDialog(title = "Clear All Fields", 
+                          "Are you sure you want to clear all fields on this tab?", 
+                          modalButton("No"), 
+                          actionButton("confirm_clear_pcs", "Yes")))
+  })
+  
+  
+  observeEvent(input$confirm_clear_pcs, {
+    reset("system_id")
+    reset("status")
+    reset("gso_status")
+    reset("issues")
+    reset("f_q")
+    
+    removeModal()
+  })
+  
+  # second tab
+  observeEvent(input$clear_edit, {
+    showModal(modalDialog(title = "Clear All Fields", 
+                          "Are you sure you want to clear all fields on this tab?", 
+                          modalButton("No"), 
+                          actionButton("confirm_clear_pcs", "Yes")))
+  })
+  
+  observeEvent(input$confirm_clear_pcs, {
+    reset("system_id_edit")
+    reset("component_id")
+    reset("issues_edit")
+    reset("issues_sub")
+    reset("date_observed")
+    reset("image_link")
+    reset("reporter_initials")
+    reset("priority")
+    reset("char_woid")
+    reset("inspector_note")
+    reset("gso_note")
+    reset("gso_status_edit")
+    
+    
+    removeModal()
+  })
+  
+  
+
 }
 
 # Run the application
