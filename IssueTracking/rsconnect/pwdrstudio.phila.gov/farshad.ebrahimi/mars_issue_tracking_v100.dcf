@@ -1,0 +1,12 @@
+name: mars_issue_tracking_v100
+title: MARS Issue Tracking v1.0.0
+username: farshad.ebrahimi
+account: farshad.ebrahimi
+server: pwdrstudio.phila.gov
+hostUrl: https://pwdrstudio.phila.gov/__api__
+appId: 457
+bundleId: 2844
+url: https://pwdrstudio.phila.gov/content/262875ba-8aa0-49ae-abb6-1ea24804e36d/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
