@@ -868,6 +868,7 @@ server <- function(input, output, session) {
     reset("gso_status")
     reset("issues")
     reset("f_q")
+    reset("priority_filter")
     
     removeModal()
   })
