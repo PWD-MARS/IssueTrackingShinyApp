@@ -321,7 +321,7 @@ server <- function(input, output, session) {
     reset("char_woid")
     reset("inspector_note")
     reset("gso_note")
-    reset("gso_status")
+    reset("gso_status_edit")
     
     
     removeModal()
