@@ -425,10 +425,20 @@ server <- function(input, output, session) {
               details = function(index) {
                 note_link <- rv$open_issues()[rv$open_issues()$issue_uid == rv$open_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
+                # Modify 'Image Link' to make it clickable in the nested table
+                note_link$`Image Link` <- ifelse(!is.na(note_link$`Image Link`), 
+                                                 paste0('<a href="', note_link$`Image Link`, '" target="_blank">', note_link$`Image Link`, '</a>'),
+                                                 "No link available")
+                
                 htmltools::div(style = "padding: 1rem",
                                reactable(note_link, 
                                          theme = darkly(),
-                                         outlined = TRUE)
+                                         outlined = TRUE,
+                                         columns = list(
+                                           "Image Link" = colDef(
+                                             html = TRUE  # Ensure Image Link is rendered as HTML
+                                           )
+                                         ))
                 )
               })
     )
@@ -531,10 +541,20 @@ server <- function(input, output, session) {
               details = function(index) {
                 note_link <- rv$closed_issues()[rv$closed_issues()$issue_uid == rv$closed_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
+                # Modify 'Image Link' to make it clickable in the nested table
+                note_link$`Image Link` <- ifelse(!is.na(note_link$`Image Link`), 
+                                                 paste0('<a href="', note_link$`Image Link`, '" target="_blank">', note_link$`Image Link`, '</a>'),
+                                                 "No link available")
+                
                 htmltools::div(style = "padding: 1rem",
                                reactable(note_link, 
                                          theme = darkly(),
-                                         outlined = TRUE)
+                                         outlined = TRUE,
+                                         columns = list(
+                                           "Image Link" = colDef(
+                                             html = TRUE  # Ensure Image Link is rendered as HTML
+                                           )
+                                         ))
                 )
               })
   )
@@ -835,10 +855,21 @@ server <- function(input, output, session) {
               details = function(index) {
                 note_link <- rv$all_issues()[rv$all_issues()$issue_uid == rv$all_issues()$issue_uid[index], ] %>%
                   select("Inspector Note" = inspector_notes, "GSO Notes" = notes, "Image Link" = link_image)
+                
+                # Modify 'Image Link' to make it clickable in the nested table
+                note_link$`Image Link` <- ifelse(!is.na(note_link$`Image Link`), 
+                                                 paste0('<a href="', note_link$`Image Link`, '" target="_blank">', note_link$`Image Link`, '</a>'),
+                                                 "No link available")
+                
                 htmltools::div(style = "padding: 1rem",
                                reactable(note_link, 
                                          theme = darkly(),
-                                         outlined = TRUE)
+                                         outlined = TRUE,
+                                         columns = list(
+                                           "Image Link" = colDef(
+                                             html = TRUE  # Ensure Image Link is rendered as HTML
+                                           )
+                                         ))
                 )
               })
   )
