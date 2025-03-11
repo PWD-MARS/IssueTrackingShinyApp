@@ -116,6 +116,10 @@ priority <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_priorit
 priority_choices <- priority %>% 
   select(priority) %>%
   pull
+
+# users
+user_choices <- c("AB", "AD", "AM", "BC", "EL", "HK", "JJ", "MR",  "MS")
+
 # wo id list
 woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") %>%
                       pull
@@ -157,7 +161,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                                      selectInput("issues_sub", html_req("Issue"), choices = "", selected = NULL)),
                                                     dateInput("date_observed", html_req("Date Observed"), value = as.Date(NA)),
                                                     textInput("image_link", "Link to Image"),
-                                                    textInput("reporter_initials", html_req("Reporter Initials")),
+                                                    selectInput("reporter_initials", html_req("Reporter Initials"), choices = c("", user_choices), selected = ""),
                                                     selectInput("priority", html_req("Priority Level"), choices = c("", priority_choices), selected = ""),
                                                     selectInput("gso_status_edit", html_req("GSO Status"), choices = c("", gso_status_choices), selected = ""),
                                                     selectizeInput ("char_woid", "Cityworks Workorder ID", choices = NULL),
@@ -342,7 +346,7 @@ server <- function(input, output, session) {
     delay(150 , updateSelectInput(session, "issues_sub", selected = rv$open_issues()$issue[rv$open_issues_row()])) # delay enusres sub issues input is enabled before update
     updateSelectInput(session, "date_observed", selected = rv$open_issues()$date_entered[rv$open_issues_row()])
     updateTextAreaInput(session, "image_link", value = rv$open_issues()$link_image[rv$open_issues_row()])
-    updateTextAreaInput(session, "reporter_initials", value = rv$open_issues()$initials[rv$open_issues_row()])
+    updateSelectInput(session, "reporter_initials", selected = rv$open_issues()$initials[rv$open_issues_row()])
     updateSelectInput(session, "priority", selected = rv$open_issues()$priority[rv$open_issues_row()])
     updateSelectInput(session, "gso_status_edit", selected = rv$open_issues()$gso_status[rv$open_issues_row()])
     updateSelectInput(session, "char_woid", selected = rv$open_issues()$workorder_id[rv$open_issues_row()])
@@ -461,7 +465,7 @@ server <- function(input, output, session) {
     delay(150 , updateSelectInput(session, "issues_sub", selected = rv$closed_issues()$issue[rv$closed_issues_row()])) # delay enusres sub issues input is enabled before update
     updateSelectInput(session, "date_observed", selected = rv$closed_issues()$date_entered[rv$closed_issues_row()])
     updateTextAreaInput(session, "image_link", value = rv$closed_issues()$link_image[rv$closed_issues_row()])
-    updateTextAreaInput(session, "reporter_initials", value = rv$closed_issues()$initials[rv$closed_issues_row()])
+    updateSelectInput(session, "reporter_initials", selected = rv$closed_issues()$initials[rv$closed_issues_row()])
     updateSelectInput(session, "priority", selected = rv$closed_issues()$priority[rv$closed_issues_row()])
     updateSelectInput(session, "gso_status_edit", selected = rv$closed_issues()$gso_status[rv$closed_issues_row()])
     updateSelectInput(session, "char_woid", selected = rv$closed_issues()$workorder_id[rv$closed_issues_row()])
