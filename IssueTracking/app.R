@@ -870,12 +870,20 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$confirm_clear_pcs, {
-    reset("system_id")
-    reset("status")
-    reset("gso_status")
-    reset("issues")
-    reset("f_q")
-    reset("priority_filter")
+    #reset("system_id")
+    # reset("status")
+    # reset("gso_status")
+    # reset("issues")
+    # reset("f_q")
+    # reset("priority_filter")
+    
+    updateSelectInput(session, "system_id", selected = "All")
+    updateSelectInput(session, "status", selected = "All")
+    updateSelectInput(session, "gso_status", selected = "All")
+    updateSelectInput(session, "issues", selected = "All")
+    updateSelectInput(session, "f_q", selected = "All")
+    updateSelectInput(session, "priority_filter", selected = "All")
+  
     
     removeModal()
   })
