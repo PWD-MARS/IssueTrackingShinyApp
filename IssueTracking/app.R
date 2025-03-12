@@ -94,7 +94,7 @@ system_id_all <- odbc::dbGetQuery(conn, paste0("select distinct system_id from e
 # systems with isses
 system_w_issues <- odbc:: dbGetQuery(conn, "SELECT distinct system_id FROM fieldwork.issues")
 
-# system id for select inputs
+# system id for select inputs. Shows systems with exisitng issues first
 system_id <- rbind(system_w_issues, system_id_all %>% filter(system_id %!in% system_w_issues$system_id)) %>%
   pull
   
@@ -126,9 +126,13 @@ priority_choices <- priority %>%
 # users
 user_choices <- c("AB", "AD", "AM", "BC", "EL", "HK", "JJ", "MR",  "MS")
 
-# wo id list
-woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") %>%
-                      pull
+# wo id list- shows workorders that already exist first
+cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") 
+
+woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues")
+
+woid <- rbind(woid_isses, cw_woid %>% filter(workorder_id %!in% woid_isses$workorder_id)) %>%
+  pull
 
 # UI -----
 
@@ -236,10 +240,15 @@ server <- function(input, output, session) {
   
   # update Workorders on click
   observeEvent(input$update_wo, {
-    # workorder ids choices
-    rv$woid <- reactive(dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") %>%
-      pull)
-    updateSelectizeInput(session, 'char_woid', choices = c('', rv$woid()), selected = '', server = TRUE)
+
+    cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") 
+    
+    woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues")
+    
+    woid <- rbind(woid_isses, cw_woid %>% filter(workorder_id %!in% woid_isses$workorder_id)) %>%
+      pull
+    
+    updateSelectizeInput(session, 'char_woid', choices = c('', woid), selected = '', server = TRUE)
     
     showModal(modalDialog(title = "Workorder IDs Updated!", size = "s", easyClose = TRUE))
 
@@ -806,6 +815,7 @@ server <- function(input, output, session) {
   # All issue table 
   output$all_issues_table <- renderReactable(
     reactable(rv$all_issues() %>%
+                arrange(desc(date_entered)) %>%
                 select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Issue" = issue,"Priority" = priority, "Entry Date" = date_entered, "GSO Status" = gso_status, "CW Status" = status),
               theme = darkly(),
               fullWidth = TRUE,
