@@ -150,13 +150,13 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                     selectInput("priority_filter", "Priority Level", choices = c("All", priority_choices)),
                                                     downloadButton("download_table", "Download"),
                                                     actionButton("clear_all", "Clear All Fields"),
-                                                    width = 3
+                                                    width = 2
                                                     
                                                   ),
                                                   mainPanel(
                                                     strong(span(textOutput("table_name"), style = "font-size:22px")),
                                                     reactableOutput("all_issues_table"),
-                                                    width = 9
+                                                    width = 10
                                                     
 
                                                   )
@@ -385,7 +385,7 @@ server <- function(input, output, session) {
   # Open issue table 
   output$open_issues_table <- renderReactable(
     reactable(rv$open_issues() %>%
-                select("Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "GSO Status" = gso_status, "CW Status" = status),
+                select("Comp ID" = component_id, "Asset Type" = asset_type,"Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "GSO Status" = gso_status, "CW Status" = status),
               theme = darkly(),
               fullWidth = TRUE,
               selection = "single",
@@ -397,7 +397,7 @@ server <- function(input, output, session) {
               defaultPageSize = 25,
               height = 450,
               columns = list(
-                "Issue" = colDef(width = 350),
+                "Issue" = colDef(width = 300),
                 "Comp ID" = colDef(width = 150),
                 "GSO Status" = colDef(
                   style = function(value) {
@@ -502,7 +502,7 @@ server <- function(input, output, session) {
   # Closed issue table 
   output$closed_issues_table <- renderReactable(
     reactable(rv$closed_issues() %>%
-                select("Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "GSO Status" = gso_status, "CW Status" = status),
+                select("Comp ID" = component_id, "Asset Type" = asset_type, "Date Observed" = date_observed, "Reporter" = initials, "Priority" = priority, "Issue" = issue, "Entry Date" = date_entered, "Workorder ID" = workorder_id, "GSO Status" = gso_status, "CW Status" = status),
               theme = darkly(),
               fullWidth = TRUE,
               selection = "single",
@@ -514,7 +514,7 @@ server <- function(input, output, session) {
               defaultPageSize = 25,
               height = 450,
               columns = list(
-                "Issue" = colDef(width = 350),
+                "Issue" = colDef(width = 300),
                 "Comp ID" = colDef(width = 150),
                 "GSO Status" = colDef(
                   style = function(value) {
@@ -817,7 +817,7 @@ server <- function(input, output, session) {
   output$all_issues_table <- renderReactable(
     reactable(rv$all_issues() %>%
                 arrange(desc(date_entered)) %>%
-                select("System ID" = system_id, "Comp ID" = component_id, "Date Observed" = date_observed, "Reporter" = initials, "Issue" = issue,"Priority" = priority, "Entry Date" = date_entered, "GSO Status" = gso_status, "CW Status" = status),
+                select("System ID" = system_id, "Comp ID" = component_id, "Asset Type" = asset_type,"Date Observed" = date_observed, "Reporter" = initials, "Issue" = issue,"Priority" = priority, "Entry Date" = date_entered, "GSO Status" = gso_status, "CW Status" = status),
               theme = darkly(),
               fullWidth = TRUE,
               selection = "single",
@@ -830,6 +830,7 @@ server <- function(input, output, session) {
               columns = list(
                 "Issue" = colDef(width = 350),
                 "Comp ID" = colDef(width = 200),
+                "Asset Type" = colDef(width = 150),
                 "Date Observed" = colDef(width = 150),
                 "GSO Status" = colDef(
                   style = function(value) {
