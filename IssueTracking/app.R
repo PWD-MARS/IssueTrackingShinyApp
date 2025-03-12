@@ -88,10 +88,16 @@ q_list  <- dbGetQuery(conn,"select * from admin.tbl_fiscal_quarter_lookup where 
   pull
 
 #system ids
-system_id <- odbc::dbGetQuery(conn, paste0("select distinct system_id from external.mat_assets where system_id like '%-%'")) %>% 
-  dplyr::arrange(system_id) %>%  
-  dplyr::pull()
+system_id_all <- odbc::dbGetQuery(conn, paste0("select distinct system_id from external.mat_assets where system_id like '%-%'")) %>% 
+  dplyr::arrange(system_id) 
 
+# systems with isses
+system_w_issues <- odbc:: dbGetQuery(conn, "SELECT distinct system_id FROM fieldwork.issues")
+
+# system id for select inputs
+system_id <- rbind(system_w_issues, system_id_all %>% filter(system_id %!in% system_w_issues$system_id)) %>%
+  pull
+  
 # load the issue types
 issue_types <- odbc::dbGetQuery(conn, paste0("SELECT * FROM fieldwork.issue_type_lookup"))
 issue_choices <- issue_types %>% 
