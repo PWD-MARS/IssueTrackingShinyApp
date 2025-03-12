@@ -399,6 +399,7 @@ server <- function(input, output, session) {
               columns = list(
                 "Issue" = colDef(width = 300),
                 "Comp ID" = colDef(width = 150),
+                "Date Observed" = colDef(width = 150),
                 "GSO Status" = colDef(
                   style = function(value) {
                     if (value == "Resolved") {
@@ -516,6 +517,7 @@ server <- function(input, output, session) {
               columns = list(
                 "Issue" = colDef(width = 300),
                 "Comp ID" = colDef(width = 150),
+                "Date Observed" = colDef(width = 150),
                 "GSO Status" = colDef(
                   style = function(value) {
                     if (value == "Resolved") {
