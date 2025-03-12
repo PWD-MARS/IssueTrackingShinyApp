@@ -92,7 +92,7 @@ system_id_all <- odbc::dbGetQuery(conn, paste0("select distinct system_id from e
   dplyr::arrange(system_id) 
 
 # systems with isses
-system_w_issues <- odbc:: dbGetQuery(conn, "SELECT distinct system_id FROM fieldwork.issues")
+system_w_issues <- odbc:: dbGetQuery(conn, "SELECT distinct system_id FROM fieldwork.issues order by system_id")
 
 # system id for select inputs. Shows systems with exisitng issues first
 system_id <- rbind(system_w_issues, system_id_all %>% filter(system_id %!in% system_w_issues$system_id)) %>%
@@ -129,7 +129,7 @@ user_choices <- c("AB", "AD", "AM", "BC", "EL", "HK", "JJ", "MR",  "MS")
 # wo id list- shows workorders that already exist first
 cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") 
 
-woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues")
+woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues order by workorder_id")
 
 woid <- rbind(woid_isses, cw_woid %>% filter(workorder_id %!in% woid_isses$workorder_id)) %>%
   na.omit() %>%
@@ -227,7 +227,7 @@ server <- function(input, output, session) {
   
   
   # all issues
-  rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
+  rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full "))
   
   # cityworks status
   rv$cw_status <- reactive(dbGetQuery(cw_conn, paste("SELECT WORKORDERID, STATUS FROM Azteca.WORKORDER where WORKORDERID in (", toString(paste("'", rv$issues()$workorder_id, "'", sep = "")),")", sep = "")) %>%
@@ -244,7 +244,7 @@ server <- function(input, output, session) {
 
     cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") 
     
-    woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues")
+    woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues order by workorder_id")
     
     woid <- rbind(woid_isses, cw_woid %>% filter(workorder_id %!in% woid_isses$workorder_id)) %>%
       pull
@@ -623,7 +623,7 @@ server <- function(input, output, session) {
       
       # reset and pull
       
-      rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
+      rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full "))
       reset("component_id")
       reset("issues_edit")
       reset("issues_sub")
@@ -655,7 +655,7 @@ server <- function(input, output, session) {
       # reset and pull
       
       
-      rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full"))
+      rv$issues <- reactive(dbGetQuery(conn, "SELECT * FROM fieldwork.viw_issues_full "))
       reset("component_id")
       reset("issues_edit")
       reset("issues_sub")
