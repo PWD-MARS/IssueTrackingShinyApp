@@ -1,0 +1,12 @@
+name: mars_issue_tracking_trial
+title: MARS Issue Tracking Trial
+username: farshad.ebrahimi
+account: farshad.ebrahimi
+server: pwdrstudio.phila.gov
+hostUrl: https://pwdrstudio.phila.gov/__api__
+appId: 457
+bundleId: 2845
+url: https://pwdrstudio.phila.gov/content/8fe36244-96df-4b16-9f0d-4a2d7d287487/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
