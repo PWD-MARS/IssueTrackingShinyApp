@@ -236,7 +236,7 @@ server <- function(input, output, session) {
   # server-side selectizeinput for system ids across the tabs
   updateSelectizeInput(session, 'system_id', choices = c("All", system_id), server = TRUE)
   updateSelectizeInput(session, 'system_id_edit', choices = c('', system_id), selected = '', server = TRUE)
-  updateSelectizeInput(session, 'char_woid', choices = c('', "1000", "1281325", woid), selected = '', server = TRUE)
+  updateSelectizeInput(session, 'char_woid', choices = c('', woid), selected = '', server = TRUE)
   
   
   # update Workorders on click
