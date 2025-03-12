@@ -132,6 +132,7 @@ cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FRO
 woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues")
 
 woid <- rbind(woid_isses, cw_woid %>% filter(workorder_id %!in% woid_isses$workorder_id)) %>%
+  na.omit() %>%
   pull
 
 # UI -----
