@@ -127,7 +127,7 @@ priority_choices <- priority %>%
 user_choices <- c("AB", "AD", "AM", "BC", "EL", "HK", "JJ", "MR",  "MS")
 
 # wo id list- shows workorders that already exist first
-cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") 
+cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01' ORDER by WORKORDERID DESC") 
 
 woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues order by workorder_id")
 
@@ -242,7 +242,7 @@ server <- function(input, output, session) {
   # update Workorders on click
   observeEvent(input$update_wo, {
 
-    cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01'") 
+    cw_woid <- dbGetQuery(cw_conn, "SELECT distinct(WORKORDERID) as workorder_id FROM Azteca.WORKORDER where INITIATEDATE > '2020-01-01' ORDER by WORKORDERID DESC") 
     
     woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwork.issues order by workorder_id")
     
