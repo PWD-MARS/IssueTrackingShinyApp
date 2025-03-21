@@ -33,6 +33,8 @@ library(DBI)
 library(RPostgres)
 # package versioning
 library(renv)
+# spinner
+library(shinycssloaders)
 #Not in logical
 `%!in%` <- Negate(`%in%`)
 
@@ -155,7 +157,7 @@ ui <- tagList(useShinyjs(), navbarPage("Issue Tracking App", id = "TabPanelID", 
                                                   ),
                                                   mainPanel(
                                                     strong(span(textOutput("table_name"), style = "font-size:22px")),
-                                                    reactableOutput("all_issues_table"),
+                                                    reactableOutput("all_issues_table") %>% withSpinner(color="#0dc5c1"),
                                                     width = 10
                                                     
 
