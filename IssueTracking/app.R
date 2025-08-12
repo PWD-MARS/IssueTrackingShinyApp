@@ -47,7 +47,7 @@ options(DT.options = list(pageLength = 15))
 #using a pool connection so separate connections are unified
 #gets environmental variables saved in local or pwdrstudio environment
 conn <- dbPool(RPostgres::Postgres(),
-                 dbname = 'mars_data', 
+                 dbname = 'mars_prod', 
                  host = 'PWDMARSDBS1', 
                  port = 5434, 
                  user = Sys.getenv("shiny_uid"),
@@ -136,6 +136,8 @@ woid_isses <- odbc:: dbGetQuery(conn, "SELECT distinct workorder_id FROM fieldwo
 woid <- rbind(woid_isses, cw_woid %>% filter(workorder_id %!in% woid_isses$workorder_id)) %>%
   na.omit() %>%
   pull
+
+
 
 # UI -----
 
